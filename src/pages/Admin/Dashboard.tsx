@@ -11,9 +11,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminDashboard: React.FC = () => {
     const { profile, signOut } = useAuth();
-    const [activeTab, setActiveTab] = useState<'dealers' | 'orders' | 'products' | 'chat' | 'analytics' | 'settings'>('analytics');
+    type TabType = 'dealers' | 'orders' | 'products' | 'chat' | 'analytics' | 'settings';
+    const [activeTab, setActiveTab] = useState<TabType>('analytics');
 
-    const menuItems = [
+    const menuItems: { id: TabType; label: string; icon: any }[] = [
         { id: 'analytics', label: 'Analytics', icon: BarChart3 },
         { id: 'dealers', label: 'Dealers', icon: Users },
         { id: 'orders', label: 'Orders', icon: ShoppingBag },
@@ -54,7 +55,7 @@ const AdminDashboard: React.FC = () => {
                     {menuItems.map(item => (
                         <button
                             key={item.id}
-                            onClick={() => setActiveTab(item.id as any)}
+                            onClick={() => setActiveTab(item.id)}
                             className={`sidebar-btn ${activeTab === item.id ? 'active' : ''}`}
                             style={{
                                 display: 'flex',

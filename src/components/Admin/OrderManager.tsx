@@ -89,7 +89,7 @@ const OrderManager: React.FC = () => {
             }
 
             // Optimistic Update
-            setOrders(orders.map(o => o.id === selectedOrder.id ? { ...o, status: pendingStatus as any } : o));
+            setOrders(orders.map(o => o.id === selectedOrder.id ? { ...o, status: pendingStatus as Order['status'] } : o));
             toast.success(`Order updated to ${pendingStatus}`, { id: toastId });
 
             // Close Modal

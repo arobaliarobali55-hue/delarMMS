@@ -10,7 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const DealerDashboard: React.FC = () => {
     const { profile, signOut } = useAuth();
-    const [activeTab, setActiveTab] = useState<'products' | 'chat' | 'orders' | 'settings'>('products');
+    type TabType = 'products' | 'chat' | 'orders' | 'settings';
+    const [activeTab, setActiveTab] = useState<TabType>('products');
     const [adminId, setAdminId] = useState<string | null>(null);
 
     React.useEffect(() => {
@@ -26,7 +27,7 @@ const DealerDashboard: React.FC = () => {
         fetchAdmin();
     }, []);
 
-    const menuItems = [
+    const menuItems: { id: TabType; label: string; icon: any }[] = [
         { id: 'products', label: 'Catalog', icon: Package },
         { id: 'chat', label: 'Support', icon: MessageSquare },
         { id: 'orders', label: 'History', icon: History },
@@ -65,7 +66,7 @@ const DealerDashboard: React.FC = () => {
                     {menuItems.map(item => (
                         <button
                             key={item.id}
-                            onClick={() => setActiveTab(item.id as any)}
+                            onClick={() => setActiveTab(item.id)}
                             style={{
                                 display: 'flex',
                                 flexDirection: 'column',

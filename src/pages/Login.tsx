@@ -22,7 +22,7 @@ const Login: React.FC = () => {
 
         try {
             if (isSignUp) {
-                const { error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
                     options: {
@@ -30,6 +30,21 @@ const Login: React.FC = () => {
                     }
                 });
                 if (error) throw error;
+
+                // Robustness: If session exists (email confirm off), ensure profile exists
+                if (data.session && data.user) {
+                    const { error: profileError } = await supabase.from('profiles').upsert({
+                        id: data.user.id,
+                        name: name,
+                        email: email,
+                        role: role,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'id' });
+
+                    if (profileError) {
+                        console.warn('Profile creation failed (might be handled by trigger):', profileError);
+                    }
+                }
 
                 alert('Account created! Please check your email or try signing in.');
                 setIsSignUp(false);
@@ -40,9 +55,6 @@ const Login: React.FC = () => {
                 });
                 if (error) throw error;
 
-                // Navigation will happen when AuthProvider detects the session change
-                // But we can optimistically navigate or wait.
-                // Best to let AuthProvider handle state, but we can stop loading.
                 navigate('/');
             }
         } catch (err: any) {
@@ -81,7 +93,10 @@ const Login: React.FC = () => {
                     </div>
                     <h1 className="gradient-text" style={{ fontSize: '2rem' }}>RESTO DEALER</h1>
                     <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-                        {isSignUp ? 'Apply for Partner Access' : 'Partner Management System'}
+                        {isSignUp
+                            ? (role === 'dealer' ? 'Dealer Registration' : 'Admin Registration')
+                            : 'Partner Management System'
+                        }
                     </p>
                 </div>
 
@@ -113,7 +128,9 @@ const Login: React.FC = () => {
                 <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {isSignUp && (
                         <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Store/Dealer Name</label>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                                {role === 'dealer' ? 'Dealer / Store Name' : 'Full Name'}
+                            </label>
                             <input
                                 type="text"
                                 required
@@ -128,7 +145,7 @@ const Login: React.FC = () => {
                                     color: '#fff',
                                     fontSize: '1rem'
                                 }}
-                                placeholder="Store Name"
+                                placeholder={role === 'dealer' ? "My Store Name" : "John Doe"}
                             />
                         </div>
                     )}
@@ -181,7 +198,7 @@ const Login: React.FC = () => {
                         disabled={loading}
                         style={{ width: '100%', padding: '14px', marginTop: '10px' }}
                     >
-                        {loading ? 'Authenticating...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+                        {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
                     </button>
                 </form>
 

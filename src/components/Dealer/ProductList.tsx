@@ -65,15 +65,7 @@ const ProductList: React.FC<ProductListProps> = ({ adminId }) => {
 
             if (orderError) throw orderError;
 
-            // 2. Decrement Stock
-            const { error: stockError } = await supabase
-                .from('products')
-                .update({ stock: selectedProduct.stock - quantity })
-                .eq('id', selectedProduct.id);
-
-            if (stockError) console.error('Stock update failed:', stockError);
-
-            // 3. Send Chat Notification
+            // 2. Send Chat Notification
             const message = `New Order Request:\n📦 ${selectedProduct.name} (x${quantity})\n💰 Total: $${selectedProduct.price * quantity}`;
             await sendMessage(message);
 

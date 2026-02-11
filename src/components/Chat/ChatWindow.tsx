@@ -115,26 +115,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
 
         try {
             // 1. Create DB Record
-            const { error: orderError } = await supabase.from('orders').insert([{
+            const { error } = await supabase.from('orders').insert([{
                 dealer_id: user.id,
                 product_id: selectedProduct.id,
                 quantity: quantity,
                 status: 'pending'
             }]);
 
-            if (orderError) throw orderError;
+            if (error) throw error;
 
-            // 2. Decrement Stock
-            const { error: stockError } = await supabase
-                .from('products')
-                .update({ stock: selectedProduct.stock - quantity })
-                .eq('id', selectedProduct.id);
-
-            if (stockError) {
-                console.error('Failed to update stock:', stockError);
-            }
-
-            // 3. Send Message
+            // 2. Send Message
             const message = `New Order Request:\n📦 ${selectedProduct.name} (x${quantity})\n💰 Total: $${selectedProduct.price * quantity}`;
             await sendMessage(message);
 
@@ -448,7 +438,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                                                 disabled={ordering}
                                                 style={{ flex: 2, padding: '16px', borderRadius: '24px', background: '#00a884', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
                                             >
-                                                {ordering ? 'Sending...' : 'Send Order'}
+                                                {ordering ? 'Sending...' : 'Confirm Order'}
                                             </button>
                                         </div>
                                     </div>

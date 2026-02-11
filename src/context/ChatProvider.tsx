@@ -23,19 +23,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (cached) {
             try {
                 const parsed = JSON.parse(cached);
-                // Convert timestamp strings back to dates if needed, but strings are fine for JSON
                 setMessages(parsed);
-                setLoading(false); // Immediate load
+                setLoading(false);
             } catch (e) {
                 console.error('Failed to parse cached messages', e);
             }
         }
     }, [user?.id]);
 
-    // Persist to local storage whenever messages change
+    // Persist to local storage efficiently
+    const lastSavedRef = useRef<string>('');
     useEffect(() => {
         if (user && messages.length > 0) {
-            localStorage.setItem(`chat_messages_${user.id}`, JSON.stringify(messages));
+            const messagesStr = JSON.stringify(messages);
+            if (messagesStr !== lastSavedRef.current) {
+                localStorage.setItem(`chat_messages_${user.id}`, messagesStr);
+                lastSavedRef.current = messagesStr;
+            }
         }
     }, [messages, user?.id]);
 
@@ -46,7 +50,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let isMounted = true;
 
         const fetchMessages = async () => {
-            // Fetch last 100 messages for the user
             const { data, error } = await supabase
                 .from('messages')
                 .select(`
@@ -59,17 +62,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     sender:profiles!sender_id(name)
                 `)
                 .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-                .order('timestamp', { ascending: false }) // Get newest first
+                .order('timestamp', { ascending: false })
                 .limit(100);
 
             if (isMounted && !error && data) {
-                const serverMessages = data.reverse(); // Oldest first
+                const serverMessages = data.reverse();
                 setMessages((prev) => {
-                    // Keep optimistic messages (temp-*) that are not yet in serverMessages
                     const optimistic = prev.filter(m => m.id.startsWith('temp-'));
-                    // Dedup server messages just in case
-                    const uniqueServer = serverMessages.filter(sm => !optimistic.some(om => om.id === sm.id)); // unlikely to match temp-id
-                    return [...uniqueServer, ...optimistic] as any;
+                    // Fast dedup: use a Map for better performance with 100+ messages
+                    const messageMap = new Map();
+                    serverMessages.forEach(m => messageMap.set(m.id, m));
+                    optimistic.forEach(m => messageMap.set(m.id, m));
+                    return Array.from(messageMap.values()) as any;
                 });
                 setLoading(false);
             }

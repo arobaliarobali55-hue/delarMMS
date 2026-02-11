@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { Send, Info, Clock, CheckCheck, Smile, Paperclip, ShoppingCart, X, Search, Plus, Minus } from 'lucide-react';
@@ -175,6 +175,67 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
     const isOnline = receiverId ? onlineUsers.has(receiverId) : false;
     const isTyping = receiverId ? typingUsers.has(receiverId) : false;
 
+    // Memoize the message list to prevent unnecessary re-renders of the entire list
+    const memoizedMessages = useMemo(() => {
+        return messages.map((msg, index) => {
+            const isMe = msg.sender_id === user?.id;
+            const showTail = index === 0 || messages[index - 1].sender_id !== msg.sender_id;
+
+            return (
+                <motion.div
+                    key={msg.id}
+                    initial={msg.id.startsWith('temp-') ? { opacity: 0, scale: 0.9, y: 10 } : false}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{
+                        alignSelf: isMe ? 'flex-end' : 'flex-start',
+                        maxWidth: '65%',
+                        position: 'relative',
+                        marginBottom: '4px'
+                    }}
+                >
+                    <div style={{
+                        backgroundColor: isMe ? '#005c4b' : '#202c33',
+                        color: '#e9edef',
+                        padding: '6px 7px 8px 9px',
+                        borderRadius: '7.5px',
+                        borderTopRightRadius: isMe && showTail ? 0 : '7.5px',
+                        borderTopLeftRadius: !isMe && showTail ? 0 : '7.5px',
+                        boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
+                        fontSize: '0.9rem',
+                        lineHeight: '19px',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '8px'
+                    }}>
+                        <span style={{ wordWrap: 'break-word', whiteSpace: 'pre-line' }}>{msg.message}</span>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                            gap: '3px',
+                            fontSize: '0.68rem',
+                            color: '#8696a0',
+                            marginLeft: 'auto',
+                            height: '15px',
+                            marginTop: 'auto'
+                        }}>
+                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {isMe && (
+                                <span style={{ display: 'flex' }}>
+                                    {msg.status === 'sending' ? (
+                                        <Clock size={14} />
+                                    ) : (
+                                        <CheckCheck size={16} color={(msg.status as any) === 'read' ? '#53bdeb' : '#8696a0'} />
+                                    )}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+            );
+        });
+    }, [messages, user?.id]);
+
     return (
         <div className="glass-panel chat-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0b141a', position: 'relative' }}>
             <div style={{ padding: '10px 16px', background: '#202c33', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #2f3b43' }}>
@@ -205,63 +266,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                 </div>
 
                 <AnimatePresence initial={false}>
-                    {messages.map((msg, index) => {
-                        const isMe = msg.sender_id === user?.id;
-                        const showTail = index === 0 || messages[index - 1].sender_id !== msg.sender_id; // Simple logic for tail
-
-                        return (
-                            <motion.div
-                                key={msg.id}
-                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                transition={{ duration: 0.2 }}
-                                style={{
-                                    alignSelf: isMe ? 'flex-end' : 'flex-start',
-                                    maxWidth: '65%',
-                                    position: 'relative',
-                                    marginBottom: '4px'
-                                }}
-                            >
-                                <div style={{
-                                    backgroundColor: isMe ? '#005c4b' : '#202c33',
-                                    color: '#e9edef',
-                                    padding: '6px 7px 8px 9px',
-                                    borderRadius: '7.5px',
-                                    borderTopRightRadius: isMe && showTail ? 0 : '7.5px',
-                                    borderTopLeftRadius: !isMe && showTail ? 0 : '7.5px',
-                                    boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
-                                    fontSize: '0.9rem',
-                                    lineHeight: '19px',
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    gap: '8px'
-                                }}>
-                                    <span style={{ wordWrap: 'break-word', whiteSpace: 'pre-line' }}>{msg.message}</span>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'flex-end',
-                                        gap: '3px',
-                                        fontSize: '0.68rem',
-                                        color: '#8696a0',
-                                        marginLeft: 'auto',
-                                        height: '15px',
-                                        marginTop: 'auto'
-                                    }}>
-                                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        {isMe && (
-                                            <span style={{ display: 'flex' }}>
-                                                {msg.status === 'sending' ? (
-                                                    <Clock size={14} />
-                                                ) : (
-                                                    <CheckCheck size={16} color={(msg.status as any) === 'read' ? '#53bdeb' : '#8696a0'} />
-                                                )}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </motion.div>
-                        );
-                    })}
+                    {memoizedMessages}
                 </AnimatePresence>
                 <div ref={messagesEndRef} />
             </div>

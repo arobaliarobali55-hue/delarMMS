@@ -70,6 +70,20 @@ const Analytics: React.FC = () => {
         };
 
         fetchAllData();
+
+        // Real-time listeners for automatic updates
+        const orderChannel = supabase.channel('analytics_orders')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchAllData)
+            .subscribe();
+
+        const productChannel = supabase.channel('analytics_products')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchAllData)
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(orderChannel);
+            supabase.removeChannel(productChannel);
+        };
     }, []);
 
     return (

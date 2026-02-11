@@ -4,10 +4,12 @@ import type { Order } from '../../types/database';
 import { ClipboardList, CheckCircle2, Clock, Package, User, DollarSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../../hooks/useAuth';
 
 const OrderManager: React.FC = () => {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
 
     const fetchOrders = async () => {
         const { data, error } = await supabase
@@ -15,7 +17,7 @@ const OrderManager: React.FC = () => {
             .select(`
                 *,
                 dealer:profiles!dealer_id(name),
-                product:products!product_id(name, price)
+                products:products!product_id(name, price)
             `)
             .order('created_at', { ascending: false });
 
@@ -41,6 +43,21 @@ const OrderManager: React.FC = () => {
         try {
             const { error } = await supabase.from('orders').update({ status }).eq('id', id);
             if (error) throw error;
+
+            // Send notification message to dealer
+            const order = orders.find(o => o.id === id);
+            if (order && user) {
+                const productName = order.products?.name || 'Product';
+                const notification = `📢 Order Update: Your order for ${productName} (x${order.quantity}) is now marked as ${status.toUpperCase()}.`;
+
+                await supabase.from('messages').insert([{
+                    sender_id: user.id,
+                    receiver_id: order.dealer_id,
+                    message: notification,
+                    type: 'system'
+                }]);
+            }
+
             toast.success(`Order marked as ${status}`, { id: toastId });
             await fetchOrders();
         } catch (err: any) {

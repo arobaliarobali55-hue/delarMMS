@@ -47,7 +47,7 @@ const Settings: React.FC = () => {
                     backdropFilter: 'blur(20px)'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                        <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
+                        <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(0, 242, 254, 0.1)', color: 'var(--primary)' }}>
                             <User size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Personal Details</h2>

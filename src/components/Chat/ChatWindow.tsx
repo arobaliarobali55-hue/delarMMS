@@ -113,7 +113,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                     name: p.name
                 }));
 
-                await placeBulkOrder(itemsToOrder, messageContent.trim(), receiverId); 
+                await placeBulkOrder(itemsToOrder, messageContent.trim());
 
                 toast.success('Order request sent!');
                 // Clear state on success
@@ -174,7 +174,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                 return [...prev, { ...product, orderQty: 1 }];
             }
         });
-        
+
         // Don't close product list, allow choosing multiple
         // toast.success(`${product.name} added to draft`);
     };

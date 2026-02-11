@@ -92,54 +92,43 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 schema: 'public',
                 table: 'messages'
             }, async (payload) => {
-                const newMessage = payload.new as Message;
+                const newMessage = payload.new as any;
 
                 // Filter messages for current user
                 if (newMessage.sender_id !== user.id && newMessage.receiver_id !== user.id) {
                     return;
                 }
 
-                // Fetch sender details if needed (for incoming messages)
-                let sender = null;
+                // Dedup and handle optimistic replacement
+                setMessages((prev) => {
+                    if (prev.some(m => m.id === newMessage.id)) return prev;
+
+                    // If it's our own message, it might be a replacement for an optimistic one
+                    if (newMessage.sender_id === user.id) {
+                        const tempMatch = prev.find(m =>
+                            m.id.startsWith('temp-') &&
+                            m.message.trim() === newMessage.message.trim()
+                        );
+                        if (tempMatch) {
+                            return prev.map(m => m.id === tempMatch.id ? { ...newMessage, sender: { name: 'You' } } : m);
+                        }
+                    }
+
+                    return [...prev, newMessage];
+                });
+
+                // Fetch sender name if it's an incoming message
                 if (newMessage.sender_id !== user.id) {
                     try {
-                        const { data } = await supabase
-                            .from('profiles')
-                            .select('name')
-                            .eq('id', newMessage.sender_id)
-                            .single();
-                        sender = data;
+                        const { data } = await supabase.from('profiles').select('name').eq('id', newMessage.sender_id).single();
+                        if (data && isMounted) {
+                            setMessages(current => current.map(m =>
+                                m.id === newMessage.id ? { ...m, sender: { name: data.name } } as any : m
+                            ));
+                        }
                     } catch (e) {
                         console.error('Failed to fetch sender profile', e);
                     }
-                } else {
-                    sender = { id: user.id, name: 'You', email: user.email || '', role: 'dealer' };
-                }
-
-                if (isMounted) {
-                    setMessages((prev) => {
-                        // If it's our own message, try to find the optimistic version and replace it
-                        if (newMessage.sender_id === user.id) {
-                            const dbMsg = newMessage.message.trim();
-                            const tempMatch = prev.find(m =>
-                                m.id.startsWith('temp-') &&
-                                m.type === newMessage.type &&
-                                m.message.trim() === dbMsg
-                            );
-
-                            if (tempMatch) {
-                                // Replace optimistic with server message
-                                return prev.map(m => m.id === tempMatch.id ? { ...newMessage, sender } as any : m);
-                            }
-                        }
-
-                        // Standard dedup by ID
-                        if (prev.some(m => m.id === newMessage.id)) return prev;
-
-                        // Add new message and ensure order is maintained by timestamp if needed, 
-                        // but usually real-time events are in order.
-                        return [...prev, { ...newMessage, sender } as any];
-                    });
                 }
             })
             .on('presence', { event: 'sync' }, () => {
@@ -338,39 +327,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setMessages((prev) => [...prev, optimisticMessage]);
 
         try {
-            // 1. Create all order entries in parallel
-            // Note: We use a loop or map because we want individual rows in 'orders' table
+            // Atomic Bulk Order RPC
+            const { error: rpcError } = await supabase.rpc('place_bulk_order', {
+                p_dealer_id: user.id,
+                p_items: items,
+                p_message_text: messageText,
+                p_receiver_id: receiverId
+            });
 
-            const ordersToInsert = items.map(item => ({
-                dealer_id: user.id,
-                product_id: item.productId,
-                quantity: item.quantity,
-                status: 'pending' // default status
-            }));
+            if (rpcError) throw rpcError;
 
-            const { error: orderError } = await supabase.from('orders').insert(ordersToInsert);
-            if (orderError) throw orderError;
-
-            // 2. Send the summary Chat Message
-            const { data: msgData, error: msgError } = await supabase
-                .from('messages')
-                .insert([{
-                    sender_id: user.id,
-                    receiver_id: receiverId,
-                    message: messageText,
-                    type: 'order',
-                }])
-                .select()
-                .single();
-
-            if (msgError) throw msgError;
-
-            // 3. Update Optimistic Message
-            if (msgData) {
-                setMessages((prev) => prev.map(msg =>
-                    msg.id === tempId ? { ...msg, ...msgData, status: 'sent', sender: optimisticMessage.sender } : msg
-                ));
-            }
+            // Mark optimistic message as sent
+            setMessages((prev) => prev.map(msg =>
+                msg.id === tempId ? { ...msg, status: 'sent' } : msg
+            ));
 
         } catch (error) {
             console.error('Error placing bulk order:', error);

@@ -87,9 +87,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Fetching profile for:', userId);
 
         try {
-            // Add a timeout promise to race against the fetch (increased to 10s)
+            // Add a timeout promise (increased to 30s for slow connections)
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+                setTimeout(() => reject(new Error('Profile fetch timeout')), 30000)
             );
 
             const fetchPromise = supabase
@@ -106,22 +106,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 throw error;
             }
 
-            console.log('Profile fetched:', data);
+            if (!data && !error) {
+                console.warn('No profile found for user:', userId);
+            }
 
-            // Only update if we are still fetching for this user
-            if (fetchingRef.current === userId) {
+            if (data && fetchingRef.current === userId) {
                 setProfile(data);
-                // Update cache
-                if (data) {
-                    localStorage.setItem(`profile_${userId}`, JSON.stringify(data));
-                }
+                localStorage.setItem(`profile_${userId}`, JSON.stringify(data));
             }
         } catch (err: any) {
             console.error('Error in fetchProfile:', err);
-            if (err.message === 'Profile fetch timeout') {
-                console.warn('Profile fetch timed out.');
-                // If we have a cached profile, this timeout matters less.
-            }
         } finally {
             if (fetchingRef.current === userId) {
                 setLoading(false);

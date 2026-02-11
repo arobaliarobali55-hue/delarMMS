@@ -23,9 +23,16 @@ const AdminChat: React.FC = () => {
     );
 
     return (
-        <div style={{ display: 'flex', gap: '32px', height: '100%', minHeight: '600px' }}>
+        <div style={{
+            display: 'flex',
+            gap: '2px',
+            height: '100%',
+            minHeight: '0',
+            flex: 1,
+            background: 'rgba(255,255,255,0.01)'
+        }}>
             {/* Dealer List */}
-            <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px', borderRight: '1px solid var(--border)' }}>
                 <div style={{ position: 'relative' }}>
                     <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                     <input

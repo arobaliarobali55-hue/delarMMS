@@ -149,7 +149,13 @@ const DealerDashboard: React.FC = () => {
                     </div>
                 </header>
 
-                <main style={{ flex: 1, padding: '40px 48px', overflowY: 'auto' }}>
+                <main style={{
+                    flex: 1,
+                    padding: activeTab === 'chat' ? '0' : '40px 48px',
+                    overflowY: activeTab === 'chat' ? 'hidden' : 'auto',
+                    display: 'flex',
+                    flexDirection: 'column'
+                }}>
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={activeTab}

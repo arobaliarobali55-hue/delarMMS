@@ -12,7 +12,7 @@ interface ChatWindowProps {
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = null }) => {
-    const { messages, sendMessage, loading, onlineUsers, typingUsers, sendTyping } = useChat(receiverId);
+    const { messages, sendMessage, placeOrder, loading, onlineUsers, typingUsers, sendTyping } = useChat(receiverId);
     const { user } = useAuth();
     const [inputText, setInputText] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -99,15 +99,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
             try {
                 const messageContent = `📦 Order Request:\n${attachedProduct.name} (x${quantity})\n💰 Total: $${(attachedProduct.price * quantity).toFixed(2)}\n\n${inputText}`;
 
-                const { error } = await supabase.rpc('place_order', {
-                    p_dealer_id: user.id,
-                    p_product_id: attachedProduct.id,
-                    p_quantity: quantity,
-                    p_message_text: messageContent.trim(),
-                    p_receiver_id: receiverId
-                });
-
-                if (error) throw error;
+                await placeOrder(
+                    attachedProduct.id,
+                    quantity,
+                    messageContent.trim(),
+                    attachedProduct.name,
+                    attachedProduct.price
+                );
 
                 // Clear state on success
                 setAttachedProduct(null);

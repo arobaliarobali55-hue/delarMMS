@@ -38,9 +38,14 @@ export const useChat = (receiverId: string | null = null) => {
          }
     };
 
+    const placeOrder = async (productId: string, quantity: number, messageText: string, productName: string, productPrice: number) => {
+        await context.placeOrder(productId, quantity, messageText, receiverId, productName, productPrice);
+    };
+
     return {
         messages,
         sendMessage,
+        placeOrder,
         loading: context.loading,
         onlineUsers: context.onlineUsers,
         typingUsers: context.typingUsers,

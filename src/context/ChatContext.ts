@@ -7,6 +7,14 @@ export interface ChatContextType {
     onlineUsers: Set<string>;
     typingUsers: Set<string>;
     sendTyping: (receiverId: string, isTyping: boolean) => Promise<void>;
+    placeOrder: (
+        productId: string,
+        quantity: number,
+        messageText: string,
+        receiverId: string | null,
+        productName: string,
+        productPrice: number
+    ) => Promise<void>;
     loading: boolean;
 }
 

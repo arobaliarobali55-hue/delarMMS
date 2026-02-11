@@ -237,8 +237,67 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     }, [user]);
 
+    const placeOrder = useCallback(async (
+        productId: string,
+        quantity: number,
+        messageText: string,
+        receiverId: string | null,
+        productName: string,
+        productPrice: number
+    ) => {
+        if (!user) return;
+
+        const tempId = 'temp-order-' + Date.now();
+        const optimisticMessage: Message = {
+            id: tempId,
+            sender_id: user.id,
+            receiver_id: receiverId,
+            message: messageText,
+            type: 'order',
+            timestamp: new Date().toISOString(),
+            status: 'sending',
+            sender: {
+                id: user.id,
+                name: 'You',
+                email: user.email || '',
+                role: 'dealer'
+            }
+        };
+
+        setMessages((prev) => [...prev, optimisticMessage]);
+
+        try {
+            const { error } = await supabase.rpc('place_order', {
+                p_dealer_id: user.id,
+                p_product_id: productId,
+                p_quantity: quantity,
+                p_message_text: messageText,
+                p_receiver_id: receiverId
+            });
+
+            if (error) throw error;
+
+            // Note: The real message will be picked up by the real-time listener
+            // which handles 'order' type messages from ourselves.
+            // We just need to remove the temp message once the real one arrives or after success.
+            // For now, the real-time listener will dedup by message content or ID.
+            
+            // To be safe, we can update the status to 'sent'
+            setMessages((prev) => prev.map(msg =>
+                msg.id === tempId ? { ...msg, status: 'sent' } : msg
+            ));
+
+        } catch (error) {
+            console.error('Error placing order:', error);
+            setMessages((prev) => prev.map(msg =>
+                msg.id === tempId ? { ...msg, status: 'error' } : msg
+            ));
+            throw error;
+        }
+    }, [user]);
+
     return (
-        <ChatContext.Provider value={{ messages, sendMessage, onlineUsers, typingUsers, sendTyping, loading }}>
+        <ChatContext.Provider value={{ messages, sendMessage, onlineUsers, typingUsers, sendTyping, placeOrder, loading }}>
             {children}
         </ChatContext.Provider>
     );

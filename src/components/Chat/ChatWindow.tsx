@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
-import { Send, Info, Clock, CheckCheck, Smile, Paperclip, ShoppingCart, X, Search } from 'lucide-react';
+import { Send, Info, Clock, CheckCheck, Smile, Paperclip, ShoppingCart, X, Search, Plus, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import type { Product } from '../../types/database';
@@ -19,11 +19,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
     const typingTimeoutRef = useRef<any>(null);
 
     // Order Feature State
-    const [showOrderModal, setShowOrderModal] = useState(false);
+    const [showProductList, setShowProductList] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+    // Attachment State
+    const [attachedProduct, setAttachedProduct] = useState<Product | null>(null);
     const [quantity, setQuantity] = useState(1);
     const [ordering, setOrdering] = useState(false);
 
@@ -70,6 +72,39 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // If there's an attached product, handle as Order
+        if (attachedProduct) {
+            if (!user) return;
+            setOrdering(true);
+            try {
+                const messageContent = `📦 Order Request:\n${attachedProduct.name} (x${quantity})\n💰 Total: $${(attachedProduct.price * quantity).toFixed(2)}\n\n${inputText}`;
+
+                const { error } = await supabase.rpc('place_order', {
+                    p_dealer_id: user.id,
+                    p_product_id: attachedProduct.id,
+                    p_quantity: quantity,
+                    p_message_text: messageContent.trim(),
+                    p_receiver_id: receiverId
+                });
+
+                if (error) throw error;
+
+                // Clear state on success
+                setAttachedProduct(null);
+                setQuantity(1);
+                setInputText('');
+                sendTyping(false);
+                setShowProductList(false); // Ensure list is closed
+            } catch (err: any) {
+                alert('Failed to place order: ' + err.message);
+            } finally {
+                setOrdering(false);
+            }
+            return;
+        }
+
+        // Standard Message Send
         if (!inputText.trim()) return;
 
         const content = inputText;
@@ -84,9 +119,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
         }
     };
 
-    // --- Order Logic ---
-    const openOrderModal = async () => {
-        setShowOrderModal(true);
+    // --- Product Selection Logic ---
+    const openProductList = async () => {
+        setShowProductList(true);
         if (products.length === 0) {
             setLoadingProducts(true);
             const { data } = await supabase.from('products').select('*').order('name');
@@ -95,44 +130,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
         }
     };
 
-    const closeOrderModal = () => {
-        setShowOrderModal(false);
-        setSelectedProduct(null);
-        setQuantity(1);
+    const closeProductList = () => {
+        setShowProductList(false);
         setSearchTerm('');
     };
 
     const handleProductSelect = (product: Product) => {
         if (product.stock > 0) {
-            setSelectedProduct(product);
+            setAttachedProduct(product);
             setQuantity(1);
-        }
-    };
-
-    const submitOrder = async () => {
-        if (!selectedProduct || !user || !receiverId) return;
-        setOrdering(true);
-
-        try {
-            // 1. Create DB Record
-            const { error } = await supabase.from('orders').insert([{
-                dealer_id: user.id,
-                product_id: selectedProduct.id,
-                quantity: quantity,
-                status: 'pending'
-            }]);
-
-            if (error) throw error;
-
-            // 2. Send Message
-            const message = `New Order Request:\n📦 ${selectedProduct.name} (x${quantity})\n💰 Total: $${selectedProduct.price * quantity}`;
-            await sendMessage(message);
-
-            closeOrderModal();
-        } catch (err: any) {
-            alert('Failed to place order: ' + err.message);
-        } finally {
-            setOrdering(false);
+            closeProductList();
         }
     };
 
@@ -210,7 +217,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                                     flexWrap: 'wrap',
                                     gap: '8px'
                                 }}>
-                                    <span style={{ wordWrap: 'break-word' }}>{msg.message}</span>
+                                    <span style={{ wordWrap: 'break-word', whiteSpace: 'pre-line' }}>{msg.message}</span>
                                     <div style={{
                                         display: 'flex',
                                         alignItems: 'flex-end',
@@ -242,65 +249,125 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
 
             {/* Input Area */}
             <div style={{
-                padding: '10px 16px',
                 background: '#202c33',
+                minHeight: '62px',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                minHeight: '62px'
+                flexDirection: 'column'
             }}>
-                <div style={{ display: 'flex', gap: '16px', color: '#8696a0' }}>
-                    <Smile size={24} style={{ cursor: 'pointer' }} />
-                    <Paperclip size={24} style={{ cursor: 'pointer' }} />
-                    {isDealer && (
-                        <ShoppingCart
-                            size={24}
-                            style={{ cursor: 'pointer', color: '#00a884' }}
-                            onClick={openOrderModal}
-                        />
-                    )}
-                </div>
-
-                <form onSubmit={handleSend} style={{ flex: 1, display: 'flex', gap: '8px' }}>
-                    <input
-                        type="text"
-                        value={inputText}
-                        onChange={handleInputChange}
-                        onBlur={() => sendTyping(false)}
-                        placeholder="Type a message"
-                        style={{
-                            flex: 1,
-                            background: '#2a3942',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '9px 12px',
-                            color: '#e9edef',
-                            fontSize: '0.95rem',
-                            outline: 'none'
-                        }}
-                    />
-                    {inputText.trim() && (
-                        <button
-                            type="submit"
+                {/* Product Attachment Preview */}
+                <AnimatePresence>
+                    {attachedProduct && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
                             style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#8696a0',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                padding: '8px'
+                                background: '#182229',
+                                borderBottom: '1px solid #2f3b43',
+                                overflow: 'hidden'
                             }}
                         >
-                            <Send size={24} />
-                        </button>
+                            <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ color: '#00a884', fontSize: '0.9rem', fontWeight: 600 }}>Order Request</div>
+                                    <div style={{ color: '#e9edef', fontWeight: 500 }}>{attachedProduct.name}</div>
+                                    <div style={{ color: '#8696a0', fontSize: '0.85rem' }}>${attachedProduct.price} / unit</div>
+                                </div>
+
+                                {/* Quantity Controls */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#202c33', padding: '4px 8px', borderRadius: '8px' }}>
+                                    <button
+                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                        className="icon-btn"
+                                        style={{ background: 'none', border: 'none', color: '#e9edef', cursor: 'pointer', padding: '4px' }}
+                                    >
+                                        <Minus size={16} />
+                                    </button>
+                                    <span style={{ color: '#e9edef', minWidth: '20px', textAlign: 'center' }}>{quantity}</span>
+                                    <button
+                                        onClick={() => setQuantity(Math.min(attachedProduct.stock, quantity + 1))}
+                                        className="icon-btn"
+                                        style={{ background: 'none', border: 'none', color: '#e9edef', cursor: 'pointer', padding: '4px' }}
+                                    >
+                                        <Plus size={16} />
+                                    </button>
+                                </div>
+
+                                <div style={{ minWidth: '60px', textAlign: 'right', color: '#e9edef', fontWeight: 600 }}>
+                                    ${(attachedProduct.price * quantity).toFixed(2)}
+                                </div>
+
+                                <button
+                                    onClick={() => setAttachedProduct(null)}
+                                    style={{ background: 'none', border: 'none', color: '#8696a0', cursor: 'pointer', padding: '4px' }}
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                        </motion.div>
                     )}
-                </form>
+                </AnimatePresence>
+
+                <div style={{
+                    padding: '10px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                }}>
+                    <div style={{ display: 'flex', gap: '16px', color: '#8696a0' }}>
+                        <Smile size={24} style={{ cursor: 'pointer' }} />
+                        <Paperclip size={24} style={{ cursor: 'pointer' }} />
+                        {isDealer && (
+                            <ShoppingCart
+                                size={24}
+                                style={{ cursor: 'pointer', color: attachedProduct ? '#00a884' : '#8696a0' }}
+                                onClick={openProductList}
+                            />
+                        )}
+                    </div>
+
+                    <form onSubmit={handleSend} style={{ flex: 1, display: 'flex', gap: '8px' }}>
+                        <input
+                            type="text"
+                            value={inputText}
+                            onChange={handleInputChange}
+                            onBlur={() => sendTyping(false)}
+                            placeholder={attachedProduct ? "Add a note..." : "Type a message"}
+                            style={{
+                                flex: 1,
+                                background: '#2a3942',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '9px 12px',
+                                color: '#e9edef',
+                                fontSize: '0.95rem',
+                                outline: 'none'
+                            }}
+                        />
+                        {(inputText.trim() || attachedProduct) && (
+                            <button
+                                type="submit"
+                                disabled={ordering}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: ordering ? '#8696a0' : '#8696a0',
+                                    cursor: ordering ? 'default' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '8px'
+                                }}
+                            >
+                                <Send size={24} />
+                            </button>
+                        )}
+                    </form>
+                </div>
             </div>
 
-            {/* Order Modal Overlay */}
+            {/* Product List Modal */}
             <AnimatePresence>
-                {showOrderModal && (
+                {showProductList && (
                     <div style={{
                         position: 'absolute',
                         bottom: '0',
@@ -322,7 +389,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                                 background: '#202c33',
                                 borderTopLeftRadius: '16px',
                                 borderTopRightRadius: '16px',
-                                height: '80%',
+                                height: '70%',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 boxShadow: '0 -4px 20px rgba(0,0,0,0.4)'
@@ -330,117 +397,63 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                         >
                             {/* Modal Header */}
                             <div style={{ padding: '16px', borderBottom: '1px solid #2f3b43', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h3 style={{ margin: 0, color: '#e9edef' }}>
-                                    {selectedProduct ? 'Confirm Order' : 'Select Product'}
-                                </h3>
-                                <button onClick={closeOrderModal} style={{ background: 'none', border: 'none', color: '#8696a0', cursor: 'pointer' }}>
+                                <h3 style={{ margin: 0, color: '#e9edef' }}>Select Product</h3>
+                                <button onClick={closeProductList} style={{ background: 'none', border: 'none', color: '#8696a0', cursor: 'pointer' }}>
                                     <X size={24} />
                                 </button>
                             </div>
 
-                            {/* Modal Content */}
+                            {/* List Content */}
                             <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-                                {!selectedProduct ? (
-                                    <>
-                                        {/* Search */}
-                                        <div style={{ position: 'relative', marginBottom: '16px' }}>
-                                            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#8696a0' }} />
-                                            <input
-                                                placeholder="Search products..."
-                                                value={searchTerm}
-                                                onChange={(e) => setSearchTerm(e.target.value)}
-                                                style={{
-                                                    width: '100%',
-                                                    background: '#2a3942',
-                                                    border: 'none',
-                                                    padding: '10px 10px 10px 40px',
-                                                    borderRadius: '8px',
-                                                    color: '#e9edef',
-                                                    outline: 'none'
-                                                }}
-                                            />
-                                        </div>
+                                {/* Search */}
+                                <div style={{ position: 'relative', marginBottom: '16px' }}>
+                                    <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#8696a0' }} />
+                                    <input
+                                        placeholder="Search products..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            background: '#2a3942',
+                                            border: 'none',
+                                            padding: '10px 10px 10px 40px',
+                                            borderRadius: '8px',
+                                            color: '#e9edef',
+                                            outline: 'none'
+                                        }}
+                                    />
+                                </div>
 
-                                        {/* Product List */}
-                                        {loadingProducts ? (
-                                            <div style={{ textAlign: 'center', color: '#8696a0', marginTop: '20px' }}>Loading products...</div>
-                                        ) : (
-                                            <div style={{ display: 'grid', gap: '12px' }}>
-                                                {filteredProducts.map(p => (
-                                                    <div
-                                                        key={p.id}
-                                                        onClick={() => handleProductSelect(p)}
-                                                        style={{
-                                                            background: '#111b21',
-                                                            padding: '12px',
-                                                            borderRadius: '8px',
-                                                            display: 'flex',
-                                                            justifyContent: 'space-between',
-                                                            alignItems: 'center',
-                                                            cursor: p.stock > 0 ? 'pointer' : 'default',
-                                                            opacity: p.stock > 0 ? 1 : 0.6
-                                                        }}
-                                                    >
-                                                        <div>
-                                                            <div style={{ fontWeight: 600, color: '#e9edef' }}>{p.name}</div>
-                                                            <div style={{ fontSize: '0.85rem', color: '#8696a0' }}>Stock: {p.stock}</div>
-                                                        </div>
-                                                        <div style={{ fontWeight: 600, color: '#00a884' }}>${p.price}</div>
-                                                    </div>
-                                                ))}
-                                                {filteredProducts.length === 0 && (
-                                                    <div style={{ textAlign: 'center', color: '#8696a0', marginTop: '20px' }}>No products found</div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </>
+                                {loadingProducts ? (
+                                    <div style={{ textAlign: 'center', color: '#8696a0', marginTop: '20px' }}>Loading products...</div>
                                 ) : (
-                                    /* Order Confirmation Form */
-                                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ background: '#111b21', padding: '20px', borderRadius: '12px', marginBottom: '24px' }}>
-                                                <h4 style={{ margin: '0 0 8px 0', color: '#e9edef', fontSize: '1.2rem' }}>{selectedProduct.name}</h4>
-                                                <p style={{ margin: 0, color: '#00a884', fontSize: '1.1rem', fontWeight: 600 }}>${selectedProduct.price} / unit</p>
-                                            </div>
-
-                                            <div style={{ marginBottom: '32px' }}>
-                                                <label style={{ display: 'block', color: '#8696a0', marginBottom: '12px' }}>Quantity</label>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                    <button
-                                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                                        style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#2a3942', border: 'none', color: '#e9edef', fontSize: '1.2rem', cursor: 'pointer' }}
-                                                    >-</button>
-                                                    <div style={{ flex: 1, textAlign: 'center', fontSize: '1.5rem', fontWeight: 600, color: '#e9edef' }}>
-                                                        {quantity}
-                                                    </div>
-                                                    <button
-                                                        onClick={() => setQuantity(Math.min(selectedProduct.stock, quantity + 1))}
-                                                        style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#2a3942', border: 'none', color: '#e9edef', fontSize: '1.2rem', cursor: 'pointer' }}
-                                                    >+</button>
+                                    <div style={{ display: 'grid', gap: '12px' }}>
+                                        {filteredProducts.map(p => (
+                                            <div
+                                                key={p.id}
+                                                onClick={() => handleProductSelect(p)}
+                                                style={{
+                                                    background: '#111b21',
+                                                    padding: '12px',
+                                                    borderRadius: '8px',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    cursor: p.stock > 0 ? 'pointer' : 'default',
+                                                    opacity: p.stock > 0 ? 1 : 0.6,
+                                                    border: attachedProduct?.id === p.id ? '1px solid #00a884' : 'none'
+                                                }}
+                                            >
+                                                <div>
+                                                    <div style={{ fontWeight: 600, color: '#e9edef' }}>{p.name}</div>
+                                                    <div style={{ fontSize: '0.85rem', color: '#8696a0' }}>Stock: {p.stock}</div>
                                                 </div>
+                                                <div style={{ fontWeight: 600, color: '#00a884' }}>${p.price}</div>
                                             </div>
-
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: '#111b21', borderRadius: '12px' }}>
-                                                <span style={{ color: '#8696a0' }}>Total</span>
-                                                <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#e9edef' }}>${(selectedProduct.price * quantity).toLocaleString()}</span>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ marginTop: 'auto', display: 'flex', gap: '12px' }}>
-                                            <button
-                                                onClick={() => setSelectedProduct(null)}
-                                                style={{ flex: 1, padding: '16px', borderRadius: '24px', background: '#2a3942', border: 'none', color: '#e9edef', fontWeight: 600, cursor: 'pointer' }}
-                                            >
-                                                Back
-                                            </button>
-                                            <button
-                                                onClick={submitOrder}
-                                                disabled={ordering}
-                                                style={{ flex: 2, padding: '16px', borderRadius: '24px', background: '#00a884', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
-                                            >
-                                                {ordering ? 'Sending...' : 'Confirm Order'}
-                                            </button>
-                                        </div>
+                                        ))}
+                                        {filteredProducts.length === 0 && (
+                                            <div style={{ textAlign: 'center', color: '#8696a0', marginTop: '20px' }}>No products found</div>
+                                        )}
                                     </div>
                                 )}
                             </div>

@@ -113,7 +113,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                     name: p.name
                 }));
 
-                await placeBulkOrder(itemsToOrder, messageContent.trim()); // receiverId handled in provider or inherited
+                await placeBulkOrder(itemsToOrder, messageContent.trim(), receiverId); 
 
                 toast.success('Order request sent!');
                 // Clear state on success
@@ -161,7 +161,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
     };
 
     const toggleProductSelect = (product: Product) => {
-        if (product.stock <= 0) return;
+        if (product.stock <= 0) {
+            toast.error('Product out of stock');
+            return;
+        }
 
         setAttachedProducts(prev => {
             const exists = prev.find(p => p.id === product.id);
@@ -171,6 +174,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                 return [...prev, { ...product, orderQty: 1 }];
             }
         });
+        
+        // Don't close product list, allow choosing multiple
+        // toast.success(`${product.name} added to draft`);
     };
 
     const filteredProducts = products.filter(p =>

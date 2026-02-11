@@ -12,6 +12,7 @@ const OrderHistory: React.FC = () => {
 
     useEffect(() => {
         if (!user) return;
+        
         const fetchOrders = async () => {
             const { data, error } = await supabase
                 .from('orders')
@@ -28,14 +29,19 @@ const OrderHistory: React.FC = () => {
 
         fetchOrders();
 
-        // Subscribe to status changes
-        const channel = supabase.channel('dealer_orders')
+        // Subscribe to ALL events for orders table (INSERT, UPDATE, DELETE)
+        // This ensures new orders appear and status updates are reflected instantly
+        const channel = supabase.channel(`dealer_orders_${user.id}`)
             .on('postgres_changes', {
-                event: 'UPDATE',
+                event: '*', // Listen to all changes
                 schema: 'public',
                 table: 'orders',
                 filter: `dealer_id=eq.${user.id}`
-            }, fetchOrders)
+            }, (payload) => {
+                console.log('Order change detected:', payload);
+                // Simple approach: re-fetch to get joined product data correctly
+                fetchOrders();
+            })
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };

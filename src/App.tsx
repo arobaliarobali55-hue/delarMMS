@@ -17,7 +17,12 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: 'admi
     </div>
   );
 
-  if (!user) return <Navigate to="/login" />;
+  if (!user) {
+    if (requiredRole === 'admin') {
+      return <Navigate to="/login?mode=signup" />
+    }
+    return <Navigate to="/login" />;
+  }
 
   if (!profile) {
     // If we have a user but no profile, we might be waiting for the trigger or something went wrong

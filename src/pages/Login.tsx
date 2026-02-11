@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Login: React.FC = () => {
-    const [isSignUp, setIsSignUp] = useState(false);
+    const [searchParams] = useSearchParams();
+    const [isSignUp, setIsSignUp] = useState(searchParams.get('mode') === 'signup');
     const [role, setRole] = useState<'dealer' | 'admin'>('dealer');
     const [email, setEmail] = useState('');
     const [name, setName] = useState('');

@@ -9,11 +9,19 @@ const AdminChat: React.FC = () => {
     const [dealers, setDealers] = useState<Profile[]>([]);
     const [selectedDealerId, setSelectedDealerId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchDealers = async () => {
-            const { data } = await supabase.from('profiles').select('*').eq('role', 'dealer');
-            if (data) setDealers(data);
+            setLoading(true);
+            try {
+                const { data } = await supabase.from('profiles').select('id, name, avatar_url, role, email').eq('role', 'dealer');
+                if (data) setDealers(data);
+            } catch (error) {
+                console.error('Error fetching dealers:', error);
+            } finally {
+                setLoading(false);
+            }
         };
         fetchDealers();
     }, []);
@@ -56,48 +64,63 @@ const AdminChat: React.FC = () => {
                 </div>
 
                 <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {filteredDealers.map((d) => (
-                        <motion.button
-                            whileHover={{ x: 4 }}
-                            whileTap={{ scale: 0.98 }}
-                            key={d.id}
-                            onClick={() => setSelectedDealerId(d.id)}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '16px',
-                                padding: '16px',
-                                borderRadius: '16px',
-                                border: '1px solid',
-                                borderColor: selectedDealerId === d.id ? 'var(--primary)' : 'transparent',
-                                background: selectedDealerId === d.id ? 'var(--glass)' : 'rgba(255,255,255,0.02)',
-                                color: selectedDealerId === d.id ? 'var(--primary)' : '#fff',
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            <div style={{
-                                width: '44px', height: '44px', borderRadius: '12px',
-                                background: selectedDealerId === d.id ? 'rgba(0, 242, 254, 0.1)' : 'var(--glass)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                border: '1px solid var(--border)'
-                            }}>
-                                <User size={20} />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontWeight: 700, fontSize: '1rem' }}>{d.name}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--success)' }} />
-                                    Active Now
+                    {loading ? (
+                        // Skeleton Loader
+                        Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)' }}>
+                                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)' }} className="animate-pulse" />
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ height: '16px', width: '60%', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', marginBottom: '8px' }} className="animate-pulse" />
+                                    <div style={{ height: '12px', width: '40%', background: 'rgba(255,255,255,0.05)', borderRadius: '4px' }} className="animate-pulse" />
                                 </div>
                             </div>
-                        </motion.button>
-                    ))}
-                    {filteredDealers.length === 0 && (
-                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                            No dealers match your search
-                        </div>
+                        ))
+                    ) : (
+                        <>
+                            {filteredDealers.map((d) => (
+                                <motion.button
+                                    whileHover={{ x: 4 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    key={d.id}
+                                    onClick={() => setSelectedDealerId(d.id)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '16px',
+                                        padding: '16px',
+                                        borderRadius: '16px',
+                                        border: '1px solid',
+                                        borderColor: selectedDealerId === d.id ? 'var(--primary)' : 'transparent',
+                                        background: selectedDealerId === d.id ? 'var(--glass)' : 'rgba(255,255,255,0.02)',
+                                        color: selectedDealerId === d.id ? 'var(--primary)' : '#fff',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '44px', height: '44px', borderRadius: '12px',
+                                        background: selectedDealerId === d.id ? 'rgba(0, 242, 254, 0.1)' : 'var(--glass)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        border: '1px solid var(--border)'
+                                    }}>
+                                        <User size={20} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: 700, fontSize: '1rem' }}>{d.name}</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--success)' }} />
+                                            Active Now
+                                        </div>
+                                    </div>
+                                </motion.button>
+                            ))}
+                            {filteredDealers.length === 0 && (
+                                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                                    No dealers match your search
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

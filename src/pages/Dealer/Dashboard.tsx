@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { Package, MessageSquare, History, LogOut, ChevronRight, User } from 'lucide-react';
+import { Package, MessageSquare, History, LogOut, ChevronRight, User, Settings as SettingsIcon } from 'lucide-react';
+import Settings from '../../components/Common/Settings';
 import ChatWindow from '../../components/Chat/ChatWindow';
 import ProductList from '../../components/Dealer/ProductList';
 import OrderHistory from '../../components/Dealer/OrderHistory';
@@ -9,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const DealerDashboard: React.FC = () => {
     const { profile, signOut } = useAuth();
-    const [activeTab, setActiveTab] = useState<'products' | 'chat' | 'orders'>('products');
+    const [activeTab, setActiveTab] = useState<'products' | 'chat' | 'orders' | 'settings'>('products');
     const [adminId, setAdminId] = useState<string | null>(null);
 
     React.useEffect(() => {
@@ -29,6 +30,7 @@ const DealerDashboard: React.FC = () => {
         { id: 'products', label: 'Catalog', icon: Package },
         { id: 'chat', label: 'Support', icon: MessageSquare },
         { id: 'orders', label: 'History', icon: History },
+        { id: 'settings', label: 'Settings', icon: SettingsIcon },
     ];
 
     return (
@@ -135,16 +137,36 @@ const DealerDashboard: React.FC = () => {
                             <h2 style={{ fontSize: '1.75rem', fontWeight: 800 }}>
                                 {activeTab === 'products' && 'Product Catalog'}
                                 {activeTab === 'orders' && 'Your Orders'}
+                                {activeTab === 'settings' && 'Account Settings'}
                             </h2>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 16px', background: 'var(--glass)', borderRadius: '20px', border: '1px solid var(--border)' }}>
+                        <div
+                            onClick={() => setActiveTab('settings')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '16px',
+                                padding: '8px 16px',
+                                background: 'var(--glass)',
+                                borderRadius: '20px',
+                                border: '1px solid var(--border)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--glass-highlight)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--glass)')}
+                        >
                             <div style={{ textAlign: 'right' }}>
                                 <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{profile?.name}</div>
                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Authorized Dealer</div>
                             </div>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--glass-highlight), transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
-                                <User size={20} />
+                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--glass-highlight), transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                                {profile?.avatar_url ? (
+                                    <img src={profile.avatar_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <User size={20} />
+                                )}
                             </div>
                         </div>
                     </header>
@@ -178,6 +200,7 @@ const DealerDashboard: React.FC = () => {
                                 )
                             )}
                             {activeTab === 'orders' && <OrderHistory />}
+                            {activeTab === 'settings' && <Settings />}
                         </motion.div>
                     </AnimatePresence>
                 </main>

@@ -130,12 +130,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const updateProfile = async (updates: Partial<Profile>) => {
+        if (!user) return;
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update(updates)
+                .eq('id', user.id);
+
+            if (error) throw error;
+
+            setProfile(prev => {
+                const updated = prev ? { ...prev, ...updates } : null;
+                if (updated) {
+                    localStorage.setItem(`profile_${user.id}`, JSON.stringify(updated));
+                }
+                return updated;
+            });
+        } catch (err) {
+            console.error('Update profile error:', err);
+            throw err;
+        }
+    };
+
     const signOut = async () => {
         await supabase.auth.signOut();
     };
 
     return (
-        <AuthContext.Provider value={{ user, profile, loading, signOut }}>
+        <AuthContext.Provider value={{ user, profile, loading, signOut, updateProfile }}>
             {children}
         </AuthContext.Provider>
     );

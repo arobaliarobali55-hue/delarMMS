@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { Users, ShoppingBag, BarChart3, Settings, LogOut, MessageSquare, ChevronRight, User } from 'lucide-react';
+import { Users, ShoppingBag, BarChart3, Settings as SettingsIcon, LogOut, MessageSquare, ChevronRight, User } from 'lucide-react';
+import Settings from '../../components/Common/Settings';
 import DealerOverview from '../../components/Admin/DealerOverview';
 import OrderManager from '../../components/Admin/OrderManager';
 import ProductCRUD from '../../components/Admin/ProductCRUD';
@@ -10,14 +11,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminDashboard: React.FC = () => {
     const { profile, signOut } = useAuth();
-    const [activeTab, setActiveTab] = useState<'dealers' | 'orders' | 'products' | 'chat' | 'analytics'>('analytics');
+    const [activeTab, setActiveTab] = useState<'dealers' | 'orders' | 'products' | 'chat' | 'analytics' | 'settings'>('analytics');
 
     const menuItems = [
         { id: 'analytics', label: 'Analytics', icon: BarChart3 },
         { id: 'dealers', label: 'Dealers', icon: Users },
         { id: 'orders', label: 'Orders', icon: ShoppingBag },
-        { id: 'products', label: 'Inventory', icon: Settings },
+        { id: 'products', label: 'Inventory', icon: SettingsIcon },
         { id: 'chat', label: 'Messages', icon: MessageSquare },
+        { id: 'settings', label: 'Settings', icon: SettingsIcon },
     ];
 
     return (
@@ -137,16 +139,36 @@ const AdminDashboard: React.FC = () => {
                                 {activeTab === 'dealers' && 'Dealer Management'}
                                 {activeTab === 'orders' && 'Order Oversight'}
                                 {activeTab === 'products' && 'Inventory Control'}
+                                {activeTab === 'settings' && 'Platform Settings'}
                             </h2>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 16px', background: 'var(--glass)', borderRadius: '20px', border: '1px solid var(--border)' }}>
+                        <div
+                            onClick={() => setActiveTab('settings')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '16px',
+                                padding: '8px 16px',
+                                background: 'var(--glass)',
+                                borderRadius: '20px',
+                                border: '1px solid var(--border)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--glass-highlight)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--glass)')}
+                        >
                             <div style={{ textAlign: 'right' }}>
                                 <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{profile?.name}</div>
                                 <div style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 700 }}>Master Admin</div>
                             </div>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--glass-highlight), transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
-                                <User size={20} />
+                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--glass-highlight), transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                                {profile?.avatar_url ? (
+                                    <img src={profile.avatar_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <User size={20} />
+                                )}
                             </div>
                         </div>
                     </header>
@@ -173,6 +195,7 @@ const AdminDashboard: React.FC = () => {
                             {activeTab === 'orders' && <OrderManager />}
                             {activeTab === 'products' && <ProductCRUD />}
                             {activeTab === 'chat' && <AdminChat />}
+                            {activeTab === 'settings' && <Settings />}
                         </motion.div>
                     </AnimatePresence>
                 </main>

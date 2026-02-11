@@ -16,12 +16,21 @@ const Analytics: React.FC = () => {
 
     useEffect(() => {
         const fetchAllData = async () => {
-            const { data: orders } = await supabase.from('orders').select('*, products(price, name)');
-            const { count: dealers } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'dealer');
-            const { data: products } = await supabase.from('products').select('*');
+            const [ordersRes, dealersCountRes, productsRes] = await Promise.all([
+                supabase.from('orders').select('id, quantity, created_at, product_id, products(price, name)'),
+                supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'dealer'),
+                supabase.from('products').select('id, name, price, stock')
+            ]);
 
-            const revenue = orders?.reduce((acc, curr) => acc + (curr.quantity * (curr.products?.price || 0)), 0) || 0;
-            const lowStock = products?.filter(p => p.stock < 10).length || 0;
+            const orders = ordersRes.data;
+            const dealers = dealersCountRes.count;
+            const products = productsRes.data;
+
+            const revenue = orders?.reduce((acc, curr) => {
+                const p = Array.isArray(curr.products) ? curr.products[0] : curr.products;
+                return acc + (curr.quantity * (p?.price || 0));
+            }, 0) || 0;
+            const lowStock = products?.filter(p => (p.stock || 0) < 10).length || 0;
 
             setStats({
                 totalRevenue: revenue,
@@ -42,7 +51,10 @@ const Analytics: React.FC = () => {
                 const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
 
                 const daysOrders = orders?.filter(o => o.created_at.startsWith(dateStr)) || [];
-                const daysRevenue = daysOrders.reduce((acc, curr) => acc + (curr.quantity * (curr.products?.price || 0)), 0);
+                const daysRevenue = daysOrders.reduce((acc, curr) => {
+                    const p = Array.isArray(curr.products) ? curr.products[0] : curr.products;
+                    return acc + (curr.quantity * (p?.price || 0));
+                }, 0);
 
                 return {
                     name: dayName,

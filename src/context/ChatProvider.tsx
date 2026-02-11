@@ -117,14 +117,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     return [...prev, newMessage];
                 });
 
-                // Fetch sender name if it's an incoming message
+                // Fetch sender name if it's an incoming message - skip if we already have it
                 if (newMessage.sender_id !== user.id) {
                     try {
                         const { data } = await supabase.from('profiles').select('name').eq('id', newMessage.sender_id).single();
                         if (data && isMounted) {
-                            setMessages(current => current.map(m =>
-                                m.id === newMessage.id ? { ...m, sender: { name: data.name } } as any : m
-                            ));
+                            setMessages(current => {
+                                const exists = current.find(m => m.id === newMessage.id);
+                                if (exists && exists.sender?.name === data.name) return current;
+                                return current.map(m =>
+                                    m.id === newMessage.id ? { ...m, sender: { ...m.sender, name: data.name } } as any : m
+                                );
+                            });
                         }
                     } catch (e) {
                         console.error('Failed to fetch sender profile', e);

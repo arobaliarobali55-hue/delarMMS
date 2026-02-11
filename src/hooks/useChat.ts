@@ -14,16 +14,22 @@ export const useChat = (receiverId: string | null = null) => {
         if (!context.messages) return [];
 
         return context.messages.filter(m => {
+            if (!user?.id) return false;
+
             // If receiverId is provided, filter for that specific conversation
             if (receiverId) {
-                const isFromReceiver = m.sender_id === receiverId && m.receiver_id === user?.id;
-                const isToReceiver = m.sender_id === user?.id && (m.receiver_id === receiverId || !m.receiver_id);
+                const mid = m.receiver_id?.toLowerCase();
+                const rid = receiverId.toLowerCase();
+                const uid = user.id.toLowerCase();
+                const sid = m.sender_id.toLowerCase();
 
-                // If the user already has a receiverId, only show messages related to them
+                const isFromReceiver = sid === rid && mid === uid;
+                const isToReceiver = sid === uid && (mid === rid || !mid);
+
                 return isFromReceiver || isToReceiver;
             }
-            // If no receiverId, return all messages where the user is involved
-            return true;
+            // If no receiverId, show all messages involvement
+            return m.sender_id === user.id || m.receiver_id === user.id;
         });
     }, [context.messages, receiverId, user?.id]);
 

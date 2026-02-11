@@ -120,24 +120,26 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setMessages((prev) => {
                         // If it's our own message, try to find the optimistic version and replace it
                         if (newMessage.sender_id === user.id) {
-                            const trimmedMsg = newMessage.message.trim();
+                            const dbMsg = newMessage.message.trim();
                             const tempMatch = prev.find(m =>
                                 m.id.startsWith('temp-') &&
-                                (m.message.trim() === trimmedMsg)
+                                m.type === newMessage.type &&
+                                m.message.trim() === dbMsg
                             );
 
                             if (tempMatch) {
+                                // Replace optimistic with server message
                                 return prev.map(m => m.id === tempMatch.id ? { ...newMessage, sender } as any : m);
                             }
                         }
 
-                        // Standard Dedup
+                        // Standard dedup by ID
                         if (prev.some(m => m.id === newMessage.id)) return prev;
+
+                        // Add new message and ensure order is maintained by timestamp if needed, 
+                        // but usually real-time events are in order.
                         return [...prev, { ...newMessage, sender } as any];
                     });
-
-                    // Force a local storage sync after update
-                    // This happens in another effect but we want to be sure
                 }
             })
             .on('presence', { event: 'sync' }, () => {

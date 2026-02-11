@@ -4,11 +4,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import {
     Send, Info, Clock, CheckCheck, Smile, Paperclip,
-    ShoppingCart, X, Search, Plus, Minus, MessageSquare, Package, User, Check
+    ShoppingCart, X, Search, Plus, Minus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import type { Message, Product } from '../../types/database';
+import type { Product } from '../../types/database';
 
 interface ChatWindowProps {
     isDealer?: boolean;
@@ -39,7 +39,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
 
     useEffect(() => {
         if (!loading) {
-            scrollToBottom();
+            // Use requestAnimationFrame for smoother scroll after render
+            requestAnimationFrame(() => scrollToBottom());
         }
     }, [messages, loading]);
 

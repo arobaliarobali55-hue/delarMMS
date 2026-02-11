@@ -192,7 +192,7 @@ const Analytics: React.FC = () => {
                 <div className="glass-panel" style={{ padding: '30px', display: 'flex', flexDirection: 'column' }}>
                     <h4 style={{ marginBottom: '24px' }}>Inventory Health</h4>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
-                        <ResponsiveContainer width="100%" height={200}>
+                        <ResponsiveContainer width="100%" height={200} minWidth={0}>
                             <PieChart>
                                 <Pie
                                     data={[

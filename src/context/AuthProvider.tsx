@@ -12,30 +12,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         let mounted = true;
 
-        // 1. Initial Session Check
-        const initSession = async () => {
-            try {
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (error) throw error;
-
-                if (mounted) {
-                    if (session?.user) {
-                        setUser(session.user);
-                        await fetchProfile(session.user.id);
-                    } else {
-                        // No session, stop loading
-                        setLoading(false);
-                    }
-                }
-            } catch (err) {
-                console.error('Session init error:', err);
-                if (mounted) setLoading(false);
-            }
-        };
-
-        initSession();
-
-        // 2. Listen for auth changes
+        // Listen for auth changes - Supabase will emit an event immediately for the initial session
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('Auth event:', event);
             if (!mounted) return;
@@ -44,10 +21,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(currentUser);
 
             if (currentUser) {
-                // If we have a user but no profile (e.g. after login), fetch it
-                // We check if we already have a profile to avoid redundant fetches if possible,
-                // but for safety on login, we fetch.
-                await fetchProfile(currentUser.id);
+                // Fetch profile only if we don't have it, or it's a login event
+                fetchProfile(currentUser.id);
             } else {
                 setProfile(null);
                 setLoading(false);
@@ -63,54 +38,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fetchingRef = React.useRef<string | null>(null);
 
     const fetchProfile = async (userId: string) => {
-        // 1. Try to load from local storage first for instant UI
+        // Prevent redundant fetches
+        if (fetchingRef.current === userId) return;
+
+        // Instant UI from local storage
         const cachedProfile = localStorage.getItem(`profile_${userId}`);
         if (cachedProfile && !profile) {
             try {
                 const parsed = JSON.parse(cachedProfile);
                 setProfile(parsed);
-                // If we found a cache, we can stop "loading" immediately while we re-validate in background
                 setLoading(false);
             } catch (e) {
-                console.error('Error parsing cached profile', e);
                 localStorage.removeItem(`profile_${userId}`);
             }
-        }
-
-        // Prevent redundant fetches for the same user
-        if (fetchingRef.current === userId) {
-            console.log('Profile fetch already in progress for:', userId);
-            return;
         }
 
         fetchingRef.current = userId;
         console.log('Fetching profile for:', userId);
 
         try {
-            // Add a timeout promise (increased to 30s for slow connections)
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Profile fetch timeout')), 30000)
-            );
-
-            const fetchPromise = supabase
+            // Re-validate profile data in background
+            const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', userId)
                 .maybeSingle();
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+            if (error) throw error;
 
-            if (error) {
-                console.error('Profile fetch error:', error);
-                throw error;
-            }
-
-            if (!data && !error) {
-                console.warn('No profile found for user:', userId);
-            }
-
-            if (data && fetchingRef.current === userId) {
+            if (data && mountedRef.current) {
                 setProfile(data);
                 localStorage.setItem(`profile_${userId}`, JSON.stringify(data));
             }
@@ -123,6 +79,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         }
     };
+
+    const mountedRef = React.useRef(true);
+    useEffect(() => {
+        return () => { mountedRef.current = false; };
+    }, []);
 
     const updateProfile = async (updates: Partial<Profile>) => {
         if (!user) return;

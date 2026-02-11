@@ -107,7 +107,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
 
                 // Prepare items for placement
                 const itemsToOrder = attachedProducts.map(p => ({
-                    productId: p.id,
+                    product_id: p.id,
                     quantity: p.orderQty,
                     price: p.price,
                     name: p.name

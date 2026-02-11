@@ -299,7 +299,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [user]);
 
     const placeBulkOrder = useCallback(async (
-        items: { productId: string; quantity: number; price: number; name: string }[],
+        items: { product_id: string; quantity: number; price: number; name: string }[],
         messageText: string,
         receiverId: string | null
     ) => {

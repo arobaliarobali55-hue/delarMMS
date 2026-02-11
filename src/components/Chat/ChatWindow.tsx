@@ -39,6 +39,25 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
         }
     }, [messages, loading]);
 
+    // Real-time stock updates for Product List
+    useEffect(() => {
+        if (!showProductList) return;
+
+        const fetchProducts = async () => {
+            const { data } = await supabase.from('products').select('*').order('name');
+            if (data) setProducts(data);
+        };
+
+        const channel = supabase
+            .channel('chat_product_list_stock')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchProducts)
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [showProductList]);
+
     // Play sound on new message (if not from me)
     useEffect(() => {
         if (!loading && messages.length > 0) {

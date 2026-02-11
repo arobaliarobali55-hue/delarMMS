@@ -93,7 +93,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 // Ignore our own messages to avoid duplicates (handled by optimistic update)
-                if (newMessage.sender_id === user.id) {
+                // BUT allow 'order' type messages because they are generated server-side without local optimistic update
+                if (newMessage.sender_id === user.id && newMessage.type !== 'order') {
                     return;
                 }
 

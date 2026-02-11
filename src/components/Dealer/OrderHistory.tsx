@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Order } from '../../types/database';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
 import { Package, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Order } from '../../types/database';
-import { ClipboardList, CheckCircle2, Clock, Package, User, DollarSign, X, MessageSquare, Send } from 'lucide-react';
+import { ClipboardList, CheckCircle2, Clock, Package, User, DollarSign, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';

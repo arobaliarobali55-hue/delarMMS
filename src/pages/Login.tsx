@@ -62,8 +62,9 @@ const Login: React.FC = () => {
                 toast.success('Signed in successfully');
                 navigate('/');
             }
-        } catch (err: any) {
-            let userMessage = err.message || 'An unexpected error occurred';
+        } catch (err: unknown) {
+            const error = err as Error;
+            let userMessage = error.message || 'An unexpected error occurred';
 
             // Map common error messages for better UX
             if (userMessage.includes('Invalid login credentials')) {
@@ -93,8 +94,9 @@ const Login: React.FC = () => {
             await resetPassword(email);
             toast.success('Password reset link sent to your email!');
             setIsResetting(false);
-        } catch (err: any) {
-            toast.error(err.message || 'Failed to send reset link');
+        } catch (err: unknown) {
+            const error = err as Error;
+            toast.error(error.message || 'Failed to send reset link');
         } finally {
             setLoading(false);
         }

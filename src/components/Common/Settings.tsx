@@ -33,8 +33,8 @@ const Settings: React.FC = () => {
     return (
         <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
             <div style={{ marginBottom: '32px' }}>
-                <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '8px' }}>Account Settings</h1>
-                <p style={{ color: 'var(--text-muted)' }}>Manage your profile information and preferences.</p>
+                <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '8px' }}>User Settings</h1>
+                <p style={{ color: 'var(--text-muted)' }}>Personalize your profile and manage account preferences.</p>
             </div>
 
             <div style={{ display: 'grid', gap: '24px' }}>
@@ -50,7 +50,7 @@ const Settings: React.FC = () => {
                         <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
                             <User size={24} />
                         </div>
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Profile Information</h2>
+                        <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Personal Details</h2>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

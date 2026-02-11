@@ -117,39 +117,40 @@ const AdminDashboard: React.FC = () => {
 
             {/* Main Content */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                <header style={{
-                    padding: '24px 48px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    background: 'rgba(7, 7, 8, 0.4)',
-                    backdropFilter: 'blur(10px)',
-                    borderBottom: '1px solid var(--border)',
-                    zIndex: 5
-                }}>
-                    <div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            Admin <ChevronRight size={12} /> <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{activeTab}</span>
+                {activeTab !== 'chat' && (
+                    <header style={{
+                        padding: '24px 48px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        background: 'rgba(7, 7, 8, 0.4)',
+                        backdropFilter: 'blur(10px)',
+                        borderBottom: '1px solid var(--border)',
+                        zIndex: 5
+                    }}>
+                        <div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                Admin <ChevronRight size={12} /> <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{activeTab}</span>
+                            </div>
+                            <h2 style={{ fontSize: '1.75rem', fontWeight: 800 }}>
+                                {activeTab === 'analytics' && 'Performance Analytics'}
+                                {activeTab === 'dealers' && 'Dealer Management'}
+                                {activeTab === 'orders' && 'Order Oversight'}
+                                {activeTab === 'products' && 'Inventory Control'}
+                            </h2>
                         </div>
-                        <h2 style={{ fontSize: '1.75rem', fontWeight: 800 }}>
-                            {activeTab === 'analytics' && 'Performance Analytics'}
-                            {activeTab === 'dealers' && 'Dealer Management'}
-                            {activeTab === 'orders' && 'Order Oversight'}
-                            {activeTab === 'products' && 'Inventory Control'}
-                            {activeTab === 'chat' && 'Central Communication'}
-                        </h2>
-                    </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 16px', background: 'var(--glass)', borderRadius: '20px', border: '1px solid var(--border)' }}>
-                        <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{profile?.name}</div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 700 }}>Master Admin</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 16px', background: 'var(--glass)', borderRadius: '20px', border: '1px solid var(--border)' }}>
+                            <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{profile?.name}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 700 }}>Master Admin</div>
+                            </div>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--glass-highlight), transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
+                                <User size={20} />
+                            </div>
                         </div>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--glass-highlight), transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
-                            <User size={20} />
-                        </div>
-                    </div>
-                </header>
+                    </header>
+                )}
 
                 <main style={{
                     flex: 1,

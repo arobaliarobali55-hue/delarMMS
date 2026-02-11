@@ -14,7 +14,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ receiverId = null }) => {
     const { user } = useAuth();
     const [inputText, setInputText] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+    const typingTimeoutRef = useRef<any>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -160,7 +160,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ receiverId = null }) => {
                                                 {msg.status === 'sending' ? (
                                                     <Clock size={14} />
                                                 ) : (
-                                                    <CheckCheck size={16} color={msg.status === 'read' ? '#53bdeb' : '#8696a0'} />
+                                                    <CheckCheck size={16} color={(msg.status as any) === 'read' ? '#53bdeb' : '#8696a0'} />
                                                 )}
                                             </span>
                                         )}

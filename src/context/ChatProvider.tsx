@@ -10,7 +10,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
     const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
     const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
-    const typingTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+    const typingTimeoutRef = useRef<Record<string, any>>({});
 
     // Load from local storage immediately
     useEffect(() => {

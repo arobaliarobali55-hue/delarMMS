@@ -106,7 +106,7 @@ const DealerDashboard: React.FC = () => {
                 </header>
 
                 <main style={{ flex: 1, padding: '20px 40px', overflowY: 'auto' }}>
-                    {activeTab === 'products' && <ProductList />}
+                    {activeTab === 'products' && <ProductList adminId={adminId} />}
                     {activeTab === 'chat' && <ChatWindow isDealer={true} receiverId={adminId} />}
                     {activeTab === 'orders' && <OrderHistory />}
                 </main>

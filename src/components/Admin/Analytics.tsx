@@ -33,10 +33,30 @@ const Analytics: React.FC = () => {
                 avgOrderValue: avgValue
             });
 
-            // Simulated day-by-day stats for the last 7 days
-            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-            setOrderTrend(days.map(d => ({ name: d, orders: Math.floor(Math.random() * 15) + 5 })));
-            setRevenueTrend(days.map(d => ({ name: d, revenue: Math.floor(Math.random() * 500) + 200 })));
+            // Real day-by-day stats for the last 7 days
+            const last7Days = Array.from({ length: 7 }, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - (6 - i));
+                return d;
+            });
+
+            const trends = last7Days.map(date => {
+                const dateStr = date.toISOString().split('T')[0];
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+
+                const daysOrders = orders?.filter(o => o.created_at.startsWith(dateStr)) || [];
+                const daysRevenue = daysOrders.reduce((acc, curr) => acc + (curr.quantity * (curr.products?.price || 0)), 0);
+
+                return {
+                    name: dayName,
+                    fullDate: dateStr,
+                    orders: daysOrders.length,
+                    revenue: daysRevenue
+                };
+            });
+
+            setOrderTrend(trends.map(t => ({ name: t.name, orders: t.orders })));
+            setRevenueTrend(trends.map(t => ({ name: t.name, revenue: t.revenue })));
 
             // Product Performance
             const perf = products?.map(p => {

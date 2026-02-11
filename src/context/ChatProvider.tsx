@@ -303,7 +303,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [user]);
 
     const placeBulkOrder = useCallback(async (
-        items: { product_id: string; quantity: number; price: number; name: string }[],
+        items: { productId: string; quantity: number; price: number; name: string }[],
         messageText: string,
         receiverId: string | null
     ) => {
@@ -331,10 +331,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setMessages((prev) => [...prev, optimisticMessage]);
 
         try {
+            // Map productId back to product_id for the Postgres RPC
+            const formattedItems = items.map(item => ({
+                product_id: item.productId,
+                quantity: item.quantity,
+                price: item.price,
+                name: item.name
+            }));
+
             // Atomic Bulk Order RPC
             const { error: rpcError } = await supabase.rpc('place_bulk_order', {
                 p_dealer_id: user.id,
-                p_items: items,
+                p_items: formattedItems,
                 p_message_text: messageText,
                 p_receiver_id: receiverId
             });

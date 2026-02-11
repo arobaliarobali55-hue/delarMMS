@@ -16,7 +16,7 @@ export interface ChatContextType {
         productPrice: number
     ) => Promise<void>;
     placeBulkOrder: (
-        items: { product_id: string; quantity: number; price: number; name: string }[],
+        items: { productId: string; quantity: number; price: number; name: string }[],
         messageText: string,
         receiverId: string | null
     ) => Promise<void>;

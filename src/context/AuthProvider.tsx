@@ -151,8 +151,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await supabase.auth.signOut();
     };
 
+    const resetPassword = async (email: string) => {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/login?mode=reset`,
+        });
+        if (error) throw error;
+    };
+
     return (
-        <AuthContext.Provider value={{ user, profile, loading, signOut, updateProfile }}>
+        <AuthContext.Provider value={{ user, profile, loading, signOut, updateProfile, resetPassword }}>
             {children}
         </AuthContext.Provider>
     );

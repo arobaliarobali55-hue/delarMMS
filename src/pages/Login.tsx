@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../hooks/useAuth';
 
 const Login: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -14,6 +15,8 @@ const Login: React.FC = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isResetting, setIsResetting] = useState(searchParams.get('mode') === 'reset');
+    const { resetPassword } = useAuth();
     const navigate = useNavigate();
 
     const handleAuth = async (e: React.FormEvent) => {
@@ -60,8 +63,38 @@ const Login: React.FC = () => {
                 navigate('/');
             }
         } catch (err: any) {
-            setError(err.message || 'An unexpected error occurred');
-            toast.error(err.message || 'Authentication failed');
+            let userMessage = err.message || 'An unexpected error occurred';
+
+            // Map common error messages for better UX
+            if (userMessage.includes('Invalid login credentials')) {
+                userMessage = 'Invalid email or password. Please try again or reset your password.';
+            } else if (userMessage.includes('Email rate limit exceeded')) {
+                userMessage = 'Too many attempts. Please wait a few minutes before trying again.';
+            } else if (userMessage.includes('Email not confirmed')) {
+                userMessage = 'Your email is not confirmed. Please check your inbox for the confirmation link.';
+            }
+
+            setError(userMessage);
+            toast.error(userMessage);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email) {
+            toast.error('Please enter your email address');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await resetPassword(email);
+            toast.success('Password reset link sent to your email!');
+            setIsResetting(false);
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to send reset link');
         } finally {
             setLoading(false);
         }
@@ -96,39 +129,43 @@ const Login: React.FC = () => {
                     </div>
                     <h1 className="gradient-text" style={{ fontSize: '2rem' }}>RESTO DEALER</h1>
                     <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
-                        {isSignUp
-                            ? (role === 'dealer' ? 'Dealer Registration' : 'Admin Registration')
-                            : 'Partner Management System'
+                        {isResetting
+                            ? 'Reset Your Password'
+                            : (isSignUp
+                                ? (role === 'dealer' ? 'Dealer Registration' : 'Admin Registration')
+                                : 'Partner Management System')
                         }
                     </p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', background: 'var(--bg-dark)', padding: '4px', borderRadius: '10px' }}>
-                    <button
-                        onClick={() => setRole('dealer')}
-                        style={{
-                            flex: 1, padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                            background: role === 'dealer' ? 'var(--primary)' : 'transparent',
-                            color: role === 'dealer' ? '#000' : 'var(--text-muted)',
-                            fontWeight: 600, transition: '0.2s'
-                        }}
-                    >
-                        Dealer
-                    </button>
-                    <button
-                        onClick={() => setRole('admin')}
-                        style={{
-                            flex: 1, padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                            background: role === 'admin' ? 'var(--primary)' : 'transparent',
-                            color: role === 'admin' ? '#000' : 'var(--text-muted)',
-                            fontWeight: 600, transition: '0.2s'
-                        }}
-                    >
-                        Admin
-                    </button>
-                </div>
+                {!isResetting && (
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', background: 'var(--bg-dark)', padding: '4px', borderRadius: '10px' }}>
+                        <button
+                            onClick={() => setRole('dealer')}
+                            style={{
+                                flex: 1, padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                                background: role === 'dealer' ? 'var(--primary)' : 'transparent',
+                                color: role === 'dealer' ? '#000' : 'var(--text-muted)',
+                                fontWeight: 600, transition: '0.2s'
+                            }}
+                        >
+                            Dealer
+                        </button>
+                        <button
+                            onClick={() => setRole('admin')}
+                            style={{
+                                flex: 1, padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                                background: role === 'admin' ? 'var(--primary)' : 'transparent',
+                                color: role === 'admin' ? '#000' : 'var(--text-muted)',
+                                fontWeight: 600, transition: '0.2s'
+                            }}
+                        >
+                            Admin
+                        </button>
+                    </div>
+                )}
 
-                <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <form onSubmit={isResetting ? handleResetPassword : handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {isSignUp && (
                         <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
@@ -173,25 +210,27 @@ const Login: React.FC = () => {
                         />
                     </div>
 
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Password</label>
-                        <input
-                            type="password"
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '12px',
-                                borderRadius: '8px',
-                                background: 'var(--bg-dark)',
-                                border: '1px solid var(--border)',
-                                color: '#fff',
-                                fontSize: '1rem'
-                            }}
-                            placeholder="••••••••"
-                        />
-                    </div>
+                    {!isResetting && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Password</label>
+                            <input
+                                type="password"
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    background: 'var(--bg-dark)',
+                                    border: '1px solid var(--border)',
+                                    color: '#fff',
+                                    fontSize: '1rem'
+                                }}
+                                placeholder="••••••••"
+                            />
+                        </div>
+                    )}
 
                     {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{error}</p>}
 
@@ -201,17 +240,34 @@ const Login: React.FC = () => {
                         disabled={loading}
                         style={{ width: '100%', padding: '14px', marginTop: '10px' }}
                     >
-                        {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
+                        {loading ? 'Processing...' : (isResetting ? 'Send Reset Link' : (isSignUp ? 'Create Account' : 'Sign In'))}
                     </button>
                 </form>
 
-                <div style={{ marginTop: '24px', textAlign: 'center' }}>
-                    <button
-                        onClick={() => setIsSignUp(!isSignUp)}
-                        style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.9rem' }}
-                    >
-                        {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-                    </button>
+                <div style={{ marginTop: '24px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {!isResetting && (
+                        <button
+                            onClick={() => {
+                                setIsSignUp(!isSignUp);
+                                setError(null);
+                            }}
+                            style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.9rem' }}
+                        >
+                            {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                        </button>
+                    )}
+
+                    {!isSignUp && (
+                        <button
+                            onClick={() => {
+                                setIsResetting(!isResetting);
+                                setError(null);
+                            }}
+                            style={{ background: 'none', border: 'none', color: isResetting ? 'var(--text-muted)' : 'var(--primary)', cursor: 'pointer', fontSize: '0.9rem' }}
+                        >
+                            {isResetting ? 'Back to Sign In' : 'Forgot Password?'}
+                        </button>
+                    )}
                 </div>
 
                 <div style={{ marginTop: '32px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>

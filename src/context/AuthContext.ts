@@ -8,6 +8,7 @@ export interface AuthContextType {
     loading: boolean;
     signOut: () => Promise<void>;
     updateProfile: (updates: Partial<Profile>) => Promise<void>;
+    resetPassword: (email: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -16,4 +17,5 @@ export const AuthContext = createContext<AuthContextType>({
     loading: true,
     signOut: async () => { },
     updateProfile: async () => { },
+    resetPassword: async () => { },
 });

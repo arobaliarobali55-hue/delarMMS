@@ -102,10 +102,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                 await placeOrder(
                     attachedProduct.id,
                     quantity,
-                    messageContent.trim(),
-                    receiverId,
-                    attachedProduct.name,
-                    attachedProduct.price
+                    messageContent.trim()
                 );
 
                 // Clear state on success

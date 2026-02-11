@@ -107,7 +107,16 @@ const DealerDashboard: React.FC = () => {
 
                 <main style={{ flex: 1, padding: '20px 40px', overflowY: 'auto' }}>
                     {activeTab === 'products' && <ProductList adminId={adminId} />}
-                    {activeTab === 'chat' && <ChatWindow isDealer={true} receiverId={adminId} />}
+                    {activeTab === 'chat' && (
+                        adminId ? (
+                            <ChatWindow isDealer={true} receiverId={adminId} />
+                        ) : (
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-muted)' }}>
+                                <div className="loader"></div>
+                                <span style={{ marginLeft: '10px' }}>Connecting to support...</span>
+                            </div>
+                        )
+                    )}
                     {activeTab === 'orders' && <OrderHistory />}
                 </main>
             </div>

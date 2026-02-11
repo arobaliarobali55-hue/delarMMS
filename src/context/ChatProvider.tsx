@@ -68,8 +68,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (isMounted && !error && data) {
                 const serverMessages = data.reverse();
                 setMessages((prev) => {
-                    const optimistic = prev.filter(m => m.id.startsWith('temp-'));
-                    // Fast dedup: use a Map for better performance with 100+ messages
+                    // Keep optimistic messages that are NOT yet sent (sending/error)
+                    // If they are 'sent', they should be in the serverMessages now.
+                    // This prevents duplication on reload.
+                    const optimistic = prev.filter(m => m.id.startsWith('temp-') && m.status !== 'sent');
+
                     const messageMap = new Map();
                     serverMessages.forEach(m => messageMap.set(m.id, m));
                     optimistic.forEach(m => messageMap.set(m.id, m));
@@ -96,32 +99,43 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     return;
                 }
 
-                // Ignore our own messages to avoid duplicates (handled by optimistic update)
-                if (newMessage.sender_id === user.id) {
-                    return;
-                }
-
-                // Fetch sender details if needed
+                // Fetch sender details if needed (for incoming messages)
                 let sender = null;
-                try {
-                    const { data } = await supabase
-                        .from('profiles')
-                        .select('name')
-                        .eq('id', newMessage.sender_id)
-                        .single();
-                    sender = data;
-                } catch (e) {
-                    console.error('Failed to fetch sender profile', e);
+                if (newMessage.sender_id !== user.id) {
+                    try {
+                        const { data } = await supabase
+                            .from('profiles')
+                            .select('name')
+                            .eq('id', newMessage.sender_id)
+                            .single();
+                        sender = data;
+                    } catch (e) {
+                        console.error('Failed to fetch sender profile', e);
+                    }
+                } else {
+                    sender = { id: user.id, name: 'You', email: user.email || '', role: 'dealer' };
                 }
 
                 if (isMounted) {
                     setMessages((prev) => {
-                        // Dedup
+                        // If it's our own message, try to find the optimistic version and replace it
+                        if (newMessage.sender_id === user.id) {
+                            const tempMatch = prev.find(m =>
+                                m.id.startsWith('temp-') &&
+                                m.message === newMessage.message
+                            );
+
+                            if (tempMatch) {
+                                return prev.map(m => m.id === tempMatch.id ? { ...newMessage, sender } as any : m);
+                            }
+                        }
+
+                        // Standard Dedup
                         if (prev.some(m => m.id === newMessage.id)) return prev;
                         return [...prev, { ...newMessage, sender } as any];
                     });
 
-                    // Play sound
+                    // Play sound only for incoming messages
                     if (newMessage.sender_id !== user.id) {
                         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
                         audio.volume = 0.5;
@@ -240,9 +254,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         productId: string,
         quantity: number,
         messageText: string,
-        receiverId: string | null,
-        productName: string,
-        productPrice: number
+        receiverId: string | null
     ) => {
         if (!user) return;
 

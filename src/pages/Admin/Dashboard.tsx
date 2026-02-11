@@ -165,6 +165,7 @@ const AdminDashboard: React.FC = () => {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.25, ease: 'easeOut' }}
+                            style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}
                         >
                             {activeTab === 'analytics' && <Analytics />}
                             {activeTab === 'dealers' && <DealerOverview />}

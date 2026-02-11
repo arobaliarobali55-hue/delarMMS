@@ -92,8 +92,10 @@ h4 {
 /* Chat Styles */
 .chat-container {
   height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .message-bubble {

@@ -97,8 +97,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 // Ignore our own messages to avoid duplicates (handled by optimistic update)
-                // BUT allow 'order' type messages because they are generated server-side without local optimistic update
-                if (newMessage.sender_id === user.id && newMessage.type !== 'order') {
+                if (newMessage.sender_id === user.id) {
                     return;
                 }
 
@@ -281,7 +280,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // which handles 'order' type messages from ourselves.
             // We just need to remove the temp message once the real one arrives or after success.
             // For now, the real-time listener will dedup by message content or ID.
-            
+
             // To be safe, we can update the status to 'sent'
             setMessages((prev) => prev.map(msg =>
                 msg.id === tempId ? { ...msg, status: 'sent' } : msg

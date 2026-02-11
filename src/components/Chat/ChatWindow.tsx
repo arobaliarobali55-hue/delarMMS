@@ -103,6 +103,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                     attachedProduct.id,
                     quantity,
                     messageContent.trim(),
+                    receiverId,
                     attachedProduct.name,
                     attachedProduct.price
                 );

@@ -110,12 +110,12 @@ const Analytics: React.FC = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                 {/* Revenue Growth */}
-                <div className="glass-panel" style={{ padding: '30px', height: '400px' }}>
+                <div className="glass-panel" style={{ padding: '30px', height: '400px', overflow: 'hidden' }}>
                     <div style={{ marginBottom: '20px' }}>
                         <h4 style={{ fontSize: '1.2rem', margin: 0 }}>Revenue Projection</h4>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Simulated weekly revenue growth</p>
                     </div>
-                    <ResponsiveContainer width="100%" height="80%">
+                    <ResponsiveContainer width="100%" height="80%" minWidth={0}>
                         <AreaChart data={revenueTrend}>
                             <defs>
                                 <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
@@ -133,12 +133,12 @@ const Analytics: React.FC = () => {
                 </div>
 
                 {/* Order Trend */}
-                <div className="glass-panel" style={{ padding: '30px', height: '400px' }}>
+                <div className="glass-panel" style={{ padding: '30px', height: '400px', overflow: 'hidden' }}>
                     <div style={{ marginBottom: '20px' }}>
                         <h4 style={{ fontSize: '1.2rem', margin: 0 }}>Order Velocity</h4>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Weekly order volume fluctuations</p>
                     </div>
-                    <ResponsiveContainer width="100%" height="80%">
+                    <ResponsiveContainer width="100%" height="80%" minWidth={0}>
                         <AreaChart data={orderTrend}>
                             <defs>
                                 <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">

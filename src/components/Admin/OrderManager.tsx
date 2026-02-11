@@ -18,19 +18,22 @@ const OrderManager: React.FC = () => {
     const [updating, setUpdating] = useState(false);
 
     const fetchOrders = async () => {
+        setLoading(true);
+        // Simplified selection to use standard relationship names
         const { data, error } = await supabase
             .from('orders')
             .select(`
                 *,
-                dealer:profiles!orders_dealer_id_fkey(name),
-                products:products!orders_product_id_fkey(name, price)
+                dealer:profiles(name),
+                products:products(name, price)
             `)
             .order('created_at', { ascending: false });
 
         if (error) {
             console.error('Error fetching orders:', error);
-            toast.error('Failed to load orders');
+            toast.error('Failed to load orders: ' + error.message);
         } else if (data) {
+            console.log('Fetched orders for admin:', data);
             setOrders(data as unknown as Order[]);
         }
         setLoading(false);

@@ -16,8 +16,9 @@ const OrderManager: React.FC = () => {
             .from('orders')
             .select(`
                 *,
-                dealer:profiles!dealer_id(name),
-                products:products!product_id(name, price)
+                *,
+                dealer:profiles!orders_dealer_id_fkey(name),
+                products:products!orders_product_id_fkey(name, price)
             `)
             .order('created_at', { ascending: false });
 

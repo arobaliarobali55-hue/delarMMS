@@ -3,8 +3,7 @@ import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import {
-    Send, Clock, CheckCheck, Smile, Paperclip,
-    ShoppingCart, X, Search, Plus, Minus, User, Package
+    Send, Smile, Paperclip, ShoppingCart, Info, Search, CheckCheck, Clock, User, Package, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -102,7 +101,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
             if (!user) return;
             setOrdering(true);
             try {
-                const messageContent = `📦 Order Request:\n${attachedProduct.name} (x${quantity})\n💰 Total: $${(attachedProduct.price * quantity).toFixed(2)}\n\n${inputText}`;
+                const messageContent = `📦 Order Request: \n${attachedProduct.name} (x${quantity}) \n💰 Total: $${(attachedProduct.price * quantity).toFixed(2)} \n\n${inputText} `;
 
                 await placeOrder(
                     attachedProduct.id,

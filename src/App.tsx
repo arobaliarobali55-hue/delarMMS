@@ -4,9 +4,10 @@ import { AuthProvider } from './context/AuthProvider';
 import { ChatProvider } from './context/ChatProvider';
 import { useAuth } from './hooks/useAuth';
 import Login from './pages/Login';
-import AdminDashboard from './pages/Admin/Dashboard';
-import DealerDashboard from './pages/Dealer/Dashboard';
+const AdminDashboard = React.lazy(() => import('./pages/Admin/Dashboard'));
+const DealerDashboard = React.lazy(() => import('./pages/Dealer/Dashboard'));
 import './styles/index.css';
+import { Suspense } from 'react';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: 'admin' | 'dealer' }> = ({ children, requiredRole }) => {
   const { user, profile, loading, signOut } = useAuth();
@@ -88,23 +89,29 @@ const App: React.FC = () => {
               },
             }}
           />
-          <Routes>
-            <Route path="/login" element={<Login />} />
+          <Suspense fallback={
+            <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0c', color: '#fff' }}>
+              <div className="loading-spinner">Loading Portal...</div>
+            </div>
+          }>
+            <Routes>
+              <Route path="/login" element={<Login />} />
 
-            <Route path="/admin/*" element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminDashboard />
-              </ProtectedRoute>
-            } />
+              <Route path="/admin/*" element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } />
 
-            <Route path="/dealer/*" element={
-              <ProtectedRoute requiredRole="dealer">
-                <DealerDashboard />
-              </ProtectedRoute>
-            } />
+              <Route path="/dealer/*" element={
+                <ProtectedRoute requiredRole="dealer">
+                  <DealerDashboard />
+                </ProtectedRoute>
+              } />
 
-            <Route path="/" element={<RootRedirect />} />
-          </Routes>
+              <Route path="/" element={<RootRedirect />} />
+            </Routes>
+          </Suspense>
         </ChatProvider>
       </AuthProvider>
     </Router>

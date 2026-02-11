@@ -40,5 +40,5 @@ export interface Message {
   // Joined fields
   sender?: Profile;
   // Local-only state for UI
-  status?: 'sending' | 'sent' | 'error';
+  status?: 'sending' | 'sent' | 'error' | 'read';
 }

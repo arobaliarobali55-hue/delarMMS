@@ -10,8 +10,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
     const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
     const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
-    const typingTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
-    
+    const typingTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
     // Load from local storage immediately
     useEffect(() => {
         if (!user) {
@@ -86,7 +86,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 table: 'messages'
             }, async (payload) => {
                 const newMessage = payload.new as Message;
-                
+
                 // Filter messages for current user
                 if (newMessage.sender_id !== user.id && newMessage.receiver_id !== user.id) {
                     return;
@@ -96,13 +96,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (newMessage.sender_id === user.id) {
                     return;
                 }
-                
+
                 // Fetch sender details if needed
-                const { data: sender } = await supabase
-                    .from('profiles')
-                    .select('name')
-                    .eq('id', newMessage.sender_id)
-                    .single();
+                let sender = null;
+                try {
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('name')
+                        .eq('id', newMessage.sender_id)
+                        .single();
+                    sender = data;
+                } catch (e) {
+                    console.error('Failed to fetch sender profile', e);
+                }
 
                 if (isMounted) {
                     setMessages((prev) => {
@@ -110,12 +116,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         if (prev.some(m => m.id === newMessage.id)) return prev;
                         return [...prev, { ...newMessage, sender } as any];
                     });
-                    
+
                     // Play sound
                     if (newMessage.sender_id !== user.id) {
-                         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
-                         audio.volume = 0.5;
-                         audio.play().catch(e => console.log('Audio play failed', e));
+                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+                        audio.volume = 0.5;
+                        audio.play().catch(e => console.log('Audio play failed', e));
                     }
                 }
             })
@@ -124,7 +130,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const userIds = new Set<string>();
                 for (const key in newState) {
                     newState[key].forEach((presence: any) => {
-                         if (presence.user_id) userIds.add(presence.user_id);
+                        if (presence.user_id) userIds.add(presence.user_id);
                     });
                 }
                 setOnlineUsers(userIds);
@@ -139,11 +145,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         next.add(userId);
                         if (typingTimeoutRef.current[userId]) clearTimeout(typingTimeoutRef.current[userId]);
                         typingTimeoutRef.current[userId] = setTimeout(() => {
-                             setTypingUsers(current => {
-                                 const updated = new Set(current);
-                                 updated.delete(userId);
-                                 return updated;
-                             });
+                            setTypingUsers(current => {
+                                const updated = new Set(current);
+                                updated.delete(userId);
+                                return updated;
+                            });
                         }, 3000);
                     } else {
                         next.delete(userId);
@@ -217,11 +223,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const sendTyping = useCallback(async (receiverId: string, isTyping: boolean) => {
         if (!user) return;
+        // We broadcast to the same channel everyone is listening on
         const channel = supabase.channel('global_chat');
         await channel.send({
             type: 'broadcast',
             event: 'typing',
-            payload: { userId: user.id, isTyping }
+            payload: { userId: user.id, receiverId, isTyping }
         });
     }, [user]);
 

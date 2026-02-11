@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
-import { Send, Package, Info, Clock, CheckCheck, Phone, Video, MoreVertical, Smile, Paperclip, Mic } from 'lucide-react';
+import { Send, Info, Clock, CheckCheck, Smile, Paperclip } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ChatWindowProps {
@@ -14,7 +14,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ receiverId = null }) => {
     const { user } = useAuth();
     const [inputText, setInputText] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const typingTimeoutRef = useRef<NodeJS.Timeout>(null);
+    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,7 +32,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ receiverId = null }) => {
             const lastMsg = messages[messages.length - 1];
             // Check if message is new (within last 5 seconds) to avoid sound on initial load
             const isNew = new Date(lastMsg.timestamp).getTime() > Date.now() - 5000;
-            
+
             if (lastMsg.sender_id !== user?.id && isNew) {
                 const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
                 audio.volume = 0.5;
@@ -43,14 +43,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ receiverId = null }) => {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInputText(e.target.value);
-        
+
         if (receiverId) {
             sendTyping(true);
-            
+
             if (typingTimeoutRef.current) {
                 clearTimeout(typingTimeoutRef.current);
             }
-            
+
             typingTimeoutRef.current = setTimeout(() => {
                 sendTyping(false);
             }, 2000);
@@ -104,9 +104,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ receiverId = null }) => {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '2px', // Closer messages like WhatsApp
-                backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")',
-                backgroundRepeat: 'repeat',
-                backgroundSize: '400px',
                 backgroundColor: '#0b141a'
             }}>
                 {/* Encryption Notice */}
@@ -118,7 +115,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ receiverId = null }) => {
                     {messages.map((msg, index) => {
                         const isMe = msg.sender_id === user?.id;
                         const showTail = index === 0 || messages[index - 1].sender_id !== msg.sender_id; // Simple logic for tail
-                        
+
                         return (
                             <motion.div
                                 key={msg.id}
@@ -147,11 +144,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ receiverId = null }) => {
                                     gap: '8px'
                                 }}>
                                     <span style={{ wordWrap: 'break-word' }}>{msg.message}</span>
-                                    <div style={{ 
-                                        display: 'flex', 
-                                        alignItems: 'flex-end', 
-                                        gap: '3px', 
-                                        fontSize: '0.68rem', 
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-end',
+                                        gap: '3px',
+                                        fontSize: '0.68rem',
                                         color: '#8696a0',
                                         marginLeft: 'auto',
                                         height: '15px',
@@ -178,11 +175,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ receiverId = null }) => {
             </div>
 
             {/* Input Area */}
-            <div style={{ 
-                padding: '10px 16px', 
-                background: '#202c33', 
-                display: 'flex', 
-                alignItems: 'center', 
+            <div style={{
+                padding: '10px 16px',
+                background: '#202c33',
+                display: 'flex',
+                alignItems: 'center',
                 gap: '12px',
                 minHeight: '62px'
             }}>
@@ -190,7 +187,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ receiverId = null }) => {
                     <Smile size={24} style={{ cursor: 'pointer' }} />
                     <Paperclip size={24} style={{ cursor: 'pointer' }} />
                 </div>
-                
+
                 <form onSubmit={handleSend} style={{ flex: 1, display: 'flex', gap: '8px' }}>
                     <input
                         type="text"
@@ -209,13 +206,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ receiverId = null }) => {
                             outline: 'none'
                         }}
                     />
-                    {inputText.trim() ? (
-                        <button 
-                            type="submit" 
-                            style={{ 
-                                background: 'transparent', 
-                                border: 'none', 
-                                color: '#8696a0', 
+                    {inputText.trim() && (
+                        <button
+                            type="submit"
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#8696a0',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -224,19 +221,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ receiverId = null }) => {
                         >
                             <Send size={24} />
                         </button>
-                    ) : (
-                        <div style={{ padding: '8px', color: '#8696a0', cursor: 'pointer' }}>
-                            <Mic size={24} />
-                        </div>
                     )}
                 </form>
             </div>
         </div>
     );
 };
-
-const SearchIcon = () => (
-    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-);
 
 export default ChatWindow;

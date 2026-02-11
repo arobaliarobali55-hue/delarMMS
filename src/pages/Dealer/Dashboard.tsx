@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 import { Package, MessageSquare, History, LogOut } from 'lucide-react';
 import ChatWindow from '../../components/Chat/ChatWindow';
 import ProductList from '../../components/Dealer/ProductList';
@@ -8,6 +9,20 @@ import OrderHistory from '../../components/Dealer/OrderHistory';
 const DealerDashboard: React.FC = () => {
     const { profile, signOut } = useAuth();
     const [activeTab, setActiveTab] = useState<'products' | 'chat' | 'orders'>('products');
+    const [adminId, setAdminId] = useState<string | null>(null);
+
+    React.useEffect(() => {
+        const fetchAdmin = async () => {
+            const { data } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('role', 'admin')
+                .limit(1)
+                .single();
+            if (data) setAdminId(data.id);
+        };
+        fetchAdmin();
+    }, []);
 
     return (
         <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-dark)' }}>
@@ -92,7 +107,7 @@ const DealerDashboard: React.FC = () => {
 
                 <main style={{ flex: 1, padding: '20px 40px', overflowY: 'auto' }}>
                     {activeTab === 'products' && <ProductList />}
-                    {activeTab === 'chat' && <ChatWindow isDealer={true} />}
+                    {activeTab === 'chat' && <ChatWindow isDealer={true} receiverId={adminId} />}
                     {activeTab === 'orders' && <OrderHistory />}
                 </main>
             </div>

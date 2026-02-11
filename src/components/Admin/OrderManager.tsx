@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Order } from '../../types/database';
-import { ClipboardList, CheckCircle2, Clock, Package, User, DollarSign } from 'lucide-react';
+import { ClipboardList, CheckCircle2, Clock, Package, User, DollarSign, X, MessageSquare, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
@@ -11,18 +11,28 @@ const OrderManager: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
 
+    // Modal State
+    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [pendingStatus, setPendingStatus] = useState<string>('');
+    const [customMessage, setCustomMessage] = useState('');
+    const [updating, setUpdating] = useState(false);
+
     const fetchOrders = async () => {
         const { data, error } = await supabase
             .from('orders')
             .select(`
-                *,
                 *,
                 dealer:profiles!orders_dealer_id_fkey(name),
                 products:products!orders_product_id_fkey(name, price)
             `)
             .order('created_at', { ascending: false });
 
-        if (!error && data) setOrders(data as unknown as Order[]);
+        if (error) {
+            console.error('Error fetching orders:', error);
+            toast.error('Failed to load orders');
+        } else if (data) {
+            setOrders(data as unknown as Order[]);
+        }
         setLoading(false);
     };
 
@@ -39,37 +49,56 @@ const OrderManager: React.FC = () => {
         return () => { supabase.removeChannel(channel); };
     }, []);
 
-    const updateStatus = async (id: string, status: string) => {
-        // Optimistic Update: Update UI immediately
-        const previousOrders = [...orders];
-        setOrders(orders.map(o => o.id === id ? { ...o, status: status as any } : o));
+    const initiateStatusUpdate = (order: Order, newStatus: string) => {
+        if (order.status === newStatus) return;
+        setSelectedOrder(order);
+        setPendingStatus(newStatus);
+        setCustomMessage('');
+    };
 
+    const confirmStatusUpdate = async () => {
+        if (!selectedOrder || !pendingStatus) return;
+
+        setUpdating(true);
         const toastId = toast.loading('Updating status...');
+
         try {
-            const { error } = await supabase.from('orders').update({ status }).eq('id', id);
+            // 1. Update Order Status
+            const { error } = await supabase
+                .from('orders')
+                .update({ status: pendingStatus })
+                .eq('id', selectedOrder.id);
+
             if (error) throw error;
 
-            // Send notification message to dealer
-            const order = orders.find(o => o.id === id);
-            if (order && user) {
-                const productName = order.products?.name || 'Product';
-                const notification = `📢 Order Update: Your order for ${productName} (x${order.quantity}) is now marked as ${status.toUpperCase()}.`;
+            // 2. Send Notification Message
+            if (user) {
+                const productName = selectedOrder.products?.name || 'Product';
+                let notification = `📢 Order Update: Your order for ${productName} (x${selectedOrder.quantity}) is now marked as ${pendingStatus.toUpperCase()}.`;
+
+                if (customMessage.trim()) {
+                    notification += `\n\n💬 Admin Note: ${customMessage}`;
+                }
 
                 await supabase.from('messages').insert([{
                     sender_id: user.id,
-                    receiver_id: order.dealer_id,
+                    receiver_id: selectedOrder.dealer_id,
                     message: notification,
-                    type: 'system'
+                    type: 'system' // System type for distinct styling if needed, or normal
                 }]);
             }
 
-            toast.success(`Order marked as ${status}`, { id: toastId });
-            // No need to fetch immediately if optimistic update worked, 
-            // but the real-time subscription will eventually confirm it.
+            // Optimistic Update
+            setOrders(orders.map(o => o.id === selectedOrder.id ? { ...o, status: pendingStatus as any } : o));
+            toast.success(`Order updated to ${pendingStatus}`, { id: toastId });
+
+            // Close Modal
+            setSelectedOrder(null);
+            setPendingStatus('');
         } catch (err: any) {
-            // Revert on error
-            setOrders(previousOrders);
             toast.error('Failed to update: ' + err.message, { id: toastId });
+        } finally {
+            setUpdating(false);
         }
     };
 
@@ -165,7 +194,7 @@ const OrderManager: React.FC = () => {
                                     <div style={{ position: 'relative' }}>
                                         <select
                                             value={order.status}
-                                            onChange={(e) => updateStatus(order.id, e.target.value)}
+                                            onChange={(e) => initiateStatusUpdate(order, e.target.value)}
                                             style={{
                                                 background: 'var(--bg-dark)',
                                                 border: '1px solid var(--border)',
@@ -192,7 +221,7 @@ const OrderManager: React.FC = () => {
 
                                 {order.status === 'pending' && (
                                     <button
-                                        onClick={() => updateStatus(order.id, 'confirmed')}
+                                        onClick={() => initiateStatusUpdate(order, 'confirmed')}
                                         className="btn-primary"
                                         style={{ padding: '10px 16px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', marginTop: '18px' }}
                                     >
@@ -211,6 +240,84 @@ const OrderManager: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Status Update Confirmation Modal */}
+            <AnimatePresence>
+                {selectedOrder && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(5px)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 1000
+                        }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="glass-panel"
+                            style={{ width: '90%', maxWidth: '400px', padding: '24px', border: '1px solid var(--border)' }}
+                        >
+                            <h3 style={{ margin: '0 0 16px', color: '#fff' }}>Confirm Status Update</h3>
+                            <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
+                                Change status of order <strong>#{selectedOrder.id.slice(0, 8)}</strong> to <span style={{ color: 'var(--primary)', fontWeight: 'bold', textTransform: 'uppercase' }}>{pendingStatus}</span>?
+                            </p>
+
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', color: '#fff' }}>
+                                    Add a Message (Optional)
+                                </label>
+                                <textarea
+                                    value={customMessage}
+                                    onChange={(e) => setCustomMessage(e.target.value)}
+                                    placeholder="e.g., Shipping via courier ABC..."
+                                    style={{
+                                        width: '100%',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '8px',
+                                        padding: '12px',
+                                        color: '#fff',
+                                        fontSize: '0.9rem',
+                                        minHeight: '80px',
+                                        resize: 'vertical'
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                                <button
+                                    onClick={() => { setSelectedOrder(null); setPendingStatus(''); }}
+                                    style={{
+                                        background: 'transparent', border: '1px solid var(--border)',
+                                        color: 'var(--text-muted)', padding: '10px 20px', borderRadius: '8px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmStatusUpdate}
+                                    disabled={updating}
+                                    className="btn-primary"
+                                    style={{
+                                        padding: '10px 24px', borderRadius: '8px',
+                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                        opacity: updating ? 0.7 : 1
+                                    }}
+                                >
+                                    {updating ? 'Updating...' : 'Confirm & Notify'}
+                                    <Send size={16} />
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

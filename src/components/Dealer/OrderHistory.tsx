@@ -12,18 +12,23 @@ const OrderHistory: React.FC = () => {
 
     useEffect(() => {
         if (!user) return;
-        
+
         const fetchOrders = async () => {
             const { data, error } = await supabase
                 .from('orders')
                 .select(`
                     *,
-                    products:product_id(name, price)
+                    products:products!orders_product_id_fkey(name, price)
                 `)
                 .eq('dealer_id', user.id)
                 .order('created_at', { ascending: false });
 
-            if (!error && data) setOrders(data as unknown as Order[]);
+            if (error) {
+                console.error('Error fetching order history:', error);
+                toast.error('Failed to load history');
+            } else if (data) {
+                setOrders(data as unknown as Order[]);
+            }
             setLoading(false);
         };
 

@@ -197,6 +197,41 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
         return messages.map((msg) => {
             const isMe = msg.sender_id === user?.id;
             const isOrder = msg.type === 'order';
+            const isSystem = msg.type === 'system';
+
+            if (isSystem) {
+                return (
+                    <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{
+                            alignSelf: 'center',
+                            maxWidth: '85%',
+                            margin: '16px 0',
+                            textAlign: 'center'
+                        }}
+                    >
+                        <div style={{
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            padding: '10px 20px',
+                            borderRadius: '12px',
+                            fontSize: '0.85rem',
+                            color: 'var(--text-muted)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px'
+                        }}>
+                            <div style={{ wordWrap: 'break-word', color: 'rgba(255,255,255,0.7)' }}>{msg.message}</div>
+                            <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>
+                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                        </div>
+                    </motion.div>
+                );
+            }
 
             return (
                 <motion.div

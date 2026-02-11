@@ -39,6 +39,10 @@ const OrderManager: React.FC = () => {
     }, []);
 
     const updateStatus = async (id: string, status: string) => {
+        // Optimistic Update: Update UI immediately
+        const previousOrders = [...orders];
+        setOrders(orders.map(o => o.id === id ? { ...o, status: status as any } : o));
+
         const toastId = toast.loading('Updating status...');
         try {
             const { error } = await supabase.from('orders').update({ status }).eq('id', id);
@@ -59,8 +63,11 @@ const OrderManager: React.FC = () => {
             }
 
             toast.success(`Order marked as ${status}`, { id: toastId });
-            await fetchOrders();
+            // No need to fetch immediately if optimistic update worked, 
+            // but the real-time subscription will eventually confirm it.
         } catch (err: any) {
+            // Revert on error
+            setOrders(previousOrders);
             toast.error('Failed to update: ' + err.message, { id: toastId });
         }
     };

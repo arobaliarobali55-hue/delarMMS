@@ -95,7 +95,7 @@ const OrderHistory: React.FC = () => {
                                     </td>
                                     <td style={{ padding: '20px' }}>
                                         <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
-                                            ${(order.quantity * (order.products?.price || 0)).toFixed(2)}
+                                            ৳{(order.quantity * (order.products?.price || 0)).toLocaleString()}
                                         </span>
                                     </td>
                                     <td style={{ padding: '20px' }}>

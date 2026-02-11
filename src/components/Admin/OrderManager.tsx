@@ -88,7 +88,7 @@ const OrderManager: React.FC = () => {
                     </div>
                     <div>
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Revenue</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>${stats.revenue.toFixed(2)}</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>৳{stats.revenue.toLocaleString()}</div>
                     </div>
                 </div>
             </div>
@@ -125,7 +125,7 @@ const OrderManager: React.FC = () => {
                                         </div>
                                         <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border)' }} />
                                         <div style={{ color: 'var(--primary)', fontWeight: 600 }}>
-                                            Total: ${(order.quantity * (order.products?.price || 0)).toFixed(2)}
+                                            Total: ৳{(order.quantity * (order.products?.price || 0)).toLocaleString()}
                                         </div>
                                     </div>
                                     <div style={{ marginTop: '8px', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -137,35 +137,39 @@ const OrderManager: React.FC = () => {
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                                     <label style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Update Status</label>
-                                    <select
-                                        value={order.status}
-                                        onChange={(e) => updateStatus(order.id, e.target.value)}
-                                        style={{
-                                            background: 'rgba(255,255,255,0.03)',
-                                            border: '1px solid var(--border)',
-                                            color: '#fff',
-                                            padding: '10px 16px',
-                                            borderRadius: '10px',
-                                            fontSize: '0.85rem',
-                                            cursor: 'pointer',
-                                            outline: 'none',
-                                            transition: 'border-color 0.2s'
-                                        }}
-                                        onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
-                                        onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                                    >
-                                        <option value="pending">Pending</option>
-                                        <option value="confirmed">Confirmed</option>
-                                        <option value="delivered">Delivered</option>
-                                        <option value="cancelled">Cancelled</option>
-                                    </select>
+                                    <div style={{ position: 'relative' }}>
+                                        <select
+                                            value={order.status}
+                                            onChange={(e) => updateStatus(order.id, e.target.value)}
+                                            style={{
+                                                background: 'var(--bg-dark)',
+                                                border: '1px solid var(--border)',
+                                                color: '#fff',
+                                                padding: '10px 32px 10px 16px',
+                                                borderRadius: '10px',
+                                                fontSize: '0.85rem',
+                                                cursor: 'pointer',
+                                                appearance: 'none',
+                                                outline: 'none',
+                                                width: '140px'
+                                            }}
+                                        >
+                                            <option value="pending" style={{ background: '#1a1a1a' }}>Pending</option>
+                                            <option value="confirmed" style={{ background: '#1a1a1a' }}>Confirmed</option>
+                                            <option value="delivered" style={{ background: '#1a1a1a' }}>Delivered</option>
+                                            <option value="cancelled" style={{ background: '#1a1a1a' }}>Cancelled</option>
+                                        </select>
+                                        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }}>
+                                            ▼
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {order.status === 'pending' && (
                                     <button
                                         onClick={() => updateStatus(order.id, 'confirmed')}
                                         className="btn-primary"
-                                        style={{ padding: '10px 16px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                        style={{ padding: '10px 16px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', marginTop: '18px' }}
                                     >
                                         <CheckCircle2 size={18} />
                                         <span>Confirm</span>

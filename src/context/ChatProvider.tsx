@@ -258,7 +258,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         productPrice: number
     ) => {
         if (!user) return;
-        console.log(`Placing order for ${productName} ($${productPrice}/ea)`);
+        console.log(`Placing order for ${productName} (৳${productPrice}/ea)`);
 
         const tempId = 'temp-order-' + Date.now();
         const optimisticMessage: Message = {

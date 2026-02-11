@@ -62,7 +62,7 @@ const ProductList: React.FC = () => {
                         <div style={{ flex: 1 }}>
                             <h3 style={{ marginBottom: '4px', fontSize: '1.25rem' }}>{product.name}</h3>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '12px' }}>
-                                <span style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1.1rem' }}>${product.price}</span>
+                                <span style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1.1rem' }}>৳{product.price}</span>
                                 <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>per unit</span>
                             </div>
                             <div style={{

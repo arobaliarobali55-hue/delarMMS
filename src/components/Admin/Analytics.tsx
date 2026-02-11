@@ -1,15 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Users, DollarSign, BarChart3, AlertTriangle } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, AlertTriangle } from 'lucide-react';
 
 const Analytics: React.FC = () => {
     const [stats, setStats] = useState({
         totalRevenue: 0,
         totalOrders: 0,
         totalDealers: 0,
-        lowStockCount: 0,
-        avgOrderValue: 0
+        lowStockCount: 0
     });
     const [orderTrend, setOrderTrend] = useState<{ name: string; orders: number }[]>([]);
     const [revenueTrend, setRevenueTrend] = useState<{ name: string; revenue: number }[]>([]);
@@ -23,14 +22,12 @@ const Analytics: React.FC = () => {
 
             const revenue = orders?.reduce((acc, curr) => acc + (curr.quantity * (curr.products?.price || 0)), 0) || 0;
             const lowStock = products?.filter(p => p.stock < 10).length || 0;
-            const avgValue = orders?.length ? revenue / orders.length : 0;
 
             setStats({
                 totalRevenue: revenue,
                 totalOrders: orders?.length || 0,
                 totalDealers: dealers || 0,
-                lowStockCount: lowStock,
-                avgOrderValue: avgValue
+                lowStockCount: lowStock
             });
 
             // Real day-by-day stats for the last 7 days
@@ -79,9 +76,8 @@ const Analytics: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '40px' }}>
             {/* Header Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                <StatCard icon={<DollarSign />} label="Gross Revenue" value={`$${stats.totalRevenue.toLocaleString()}`} color="var(--primary)" />
+                <StatCard icon={<DollarSign />} label="Gross Revenue" value={`৳${stats.totalRevenue.toLocaleString()}`} color="var(--primary)" />
                 <StatCard icon={<TrendingUp />} label="Total Orders" value={stats.totalOrders.toString()} color="var(--success)" />
-                <StatCard icon={<BarChart3 />} label="Avg. Ticket" value={`$${stats.avgOrderValue.toFixed(2)}`} color="var(--secondary)" />
                 <StatCard icon={<Users />} label="Partners" value={stats.totalDealers.toString()} color="#3a7bd5" />
                 <StatCard icon={<AlertTriangle />} label="Low Stock" value={stats.lowStockCount.toString()} color="var(--danger)" />
             </div>
@@ -104,7 +100,7 @@ const Analytics: React.FC = () => {
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                             <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} axisLine={false} tickLine={false} />
                             <YAxis stroke="var(--text-muted)" fontSize={12} axisLine={false} tickLine={false} />
-                            <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px' }} />
+                            <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px' }} formatter={(val: any) => [`৳${val.toLocaleString()}`, 'Revenue']} />
                             <Area type="monotone" dataKey="revenue" stroke="var(--primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
                         </AreaChart>
                     </ResponsiveContainer>
@@ -153,7 +149,7 @@ const Analytics: React.FC = () => {
                                     <tr key={p.name} style={{ borderBottom: '1px solid var(--border)' }}>
                                         <td style={{ padding: '15px', fontWeight: 600 }}>{p.name}</td>
                                         <td style={{ padding: '15px' }}>{p.sold} units</td>
-                                        <td style={{ padding: '15px' }}>${p.revenue.toLocaleString()}</td>
+                                        <td style={{ padding: '15px' }}>৳{p.revenue.toLocaleString()}</td>
                                         <td style={{ padding: '15px' }}>
                                             <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', background: 'rgba(0, 242, 254, 0.1)', color: 'var(--primary)' }}>
                                                 TOP

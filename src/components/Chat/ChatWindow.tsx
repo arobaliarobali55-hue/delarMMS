@@ -101,7 +101,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
             if (!user) return;
             setOrdering(true);
             try {
-                const messageContent = `📦 Order Request: \n${attachedProduct.name} (x${quantity}) \n💰 Total: $${(attachedProduct.price * quantity).toFixed(2)} \n\n${inputText} `;
+                const messageContent = `📦 Order Request: \n${attachedProduct.name} (x${quantity}) \n💰 Total: ৳${(attachedProduct.price * quantity).toLocaleString()} \n\n${inputText} `;
 
                 await placeOrder(
                     attachedProduct.id,
@@ -528,7 +528,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1.1rem' }}>${p.price}</div>
+                                                <div style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1.1rem' }}>৳{p.price}</div>
                                             </motion.div>
                                         ))}
                                         {filteredProducts.length === 0 && (

@@ -16,10 +16,13 @@ export const useChat = (receiverId: string | null = null) => {
         return context.messages.filter(m => {
             // If receiverId is provided, filter for that specific conversation
             if (receiverId) {
-                return (m.sender_id === receiverId && m.receiver_id === user?.id) ||
-                    (m.sender_id === user?.id && m.receiver_id === receiverId);
+                const isFromReceiver = m.sender_id === receiverId && m.receiver_id === user?.id;
+                const isToReceiver = m.sender_id === user?.id && (m.receiver_id === receiverId || !m.receiver_id);
+
+                // If the user already has a receiverId, only show messages related to them
+                return isFromReceiver || isToReceiver;
             }
-            // If no receiverId, return all messages where the user is involved (which is already what the context has)
+            // If no receiverId, return all messages where the user is involved
             return true;
         });
     }, [context.messages, receiverId, user?.id]);
@@ -38,8 +41,8 @@ export const useChat = (receiverId: string | null = null) => {
         }
     };
 
-    const placeOrder = async (productId: string, quantity: number, messageText: string) => {
-        await context.placeOrder(productId, quantity, messageText, receiverId);
+    const placeOrder = async (productId: string, quantity: number, messageText: string, productName: string, productPrice: number) => {
+        await context.placeOrder(productId, quantity, messageText, receiverId, productName, productPrice);
     };
 
     return {

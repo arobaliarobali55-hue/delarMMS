@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { Package, MessageSquare, History, LogOut } from 'lucide-react';
+import { Package, MessageSquare, History, LogOut, ChevronRight, User } from 'lucide-react';
 import ChatWindow from '../../components/Chat/ChatWindow';
 import ProductList from '../../components/Dealer/ProductList';
 import OrderHistory from '../../components/Dealer/OrderHistory';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const DealerDashboard: React.FC = () => {
     const { profile, signOut } = useAuth();
@@ -24,100 +25,153 @@ const DealerDashboard: React.FC = () => {
         fetchAdmin();
     }, []);
 
+    const menuItems = [
+        { id: 'products', label: 'Catalog', icon: Package },
+        { id: 'chat', label: 'Support', icon: MessageSquare },
+        { id: 'orders', label: 'History', icon: History },
+    ];
+
     return (
-        <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-dark)' }}>
+        <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-dark)', overflow: 'hidden' }}>
             {/* Sidebar */}
             <div style={{
-                width: '80px',
+                width: '100px',
                 borderRight: '1px solid var(--border)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                padding: '20px 0',
-                gap: '32px'
+                padding: '32px 0',
+                background: 'linear-gradient(180deg, rgba(18, 18, 20, 0.5), rgba(7, 7, 8, 0.5))',
+                backdropFilter: 'blur(20px)',
+                zIndex: 10
             }}>
                 <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'linear-gradient(45deg, var(--primary), var(--secondary))',
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginBottom: '20px'
+                    marginBottom: '48px',
+                    boxShadow: '0 8px 16px rgba(0, 242, 254, 0.2)'
                 }}>
-                    <Package color="#000" size={24} />
+                    <Package color="#000" size={28} />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
+                    {menuItems.map(item => (
+                        <button
+                            key={item.id}
+                            onClick={() => setActiveTab(item.id as any)}
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '8px',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: activeTab === item.id ? 'var(--primary)' : 'var(--text-muted)',
+                                transition: 'all 0.3s ease',
+                                position: 'relative'
+                            }}
+                        >
+                            <item.icon size={26} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+                            <span style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.05em' }}>{item.label}</span>
+                            {activeTab === item.id && (
+                                <motion.div
+                                    layoutId="activeTabIndicator"
+                                    style={{
+                                        position: 'absolute',
+                                        right: '-32px',
+                                        width: '4px',
+                                        height: '32px',
+                                        borderRadius: '4px 0 0 4px',
+                                        background: 'var(--primary)',
+                                        boxShadow: '0 0 10px var(--primary)'
+                                    }}
+                                />
+                            )}
+                        </button>
+                    ))}
                 </div>
 
                 <button
-                    onClick={() => setActiveTab('products')}
+                    onClick={signOut}
                     style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: activeTab === 'products' ? 'var(--primary)' : 'var(--text-muted)'
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--danger)',
+                        padding: '12px',
+                        borderRadius: '12px',
+                        transition: 'all 0.2s'
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 >
-                    <Package size={28} />
+                    <LogOut size={24} />
                 </button>
-
-                <button
-                    onClick={() => setActiveTab('chat')}
-                    style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: activeTab === 'chat' ? 'var(--primary)' : 'var(--text-muted)'
-                    }}
-                >
-                    <MessageSquare size={28} />
-                </button>
-
-                <button
-                    onClick={() => setActiveTab('orders')}
-                    style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: activeTab === 'orders' ? 'var(--primary)' : 'var(--text-muted)'
-                    }}
-                >
-                    <History size={28} />
-                </button>
-
-                <div style={{ marginTop: 'auto' }}>
-                    <button onClick={signOut} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}>
-                        <LogOut size={28} />
-                    </button>
-                </div>
             </div>
 
             {/* Main Content */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
                 <header style={{
-                    padding: '20px 40px',
-                    borderBottom: '1px solid var(--border)',
+                    padding: '24px 48px',
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    background: 'rgba(7, 7, 8, 0.4)',
+                    backdropFilter: 'blur(10px)',
+                    borderBottom: '1px solid var(--border)',
+                    zIndex: 5
                 }}>
                     <div>
-                        <h2 style={{ fontSize: '1.5rem' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            Dashboard <ChevronRight size={12} /> <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{activeTab}</span>
+                        </div>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 800 }}>
                             {activeTab === 'products' && 'Product Catalog'}
                             {activeTab === 'chat' && 'Admin Support'}
                             {activeTab === 'orders' && 'Your Orders'}
                         </h2>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Welcome back, {profile?.name}</p>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 16px', background: 'var(--glass)', borderRadius: '20px', border: '1px solid var(--border)' }}>
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{profile?.name}</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Authorized Dealer</div>
+                        </div>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--glass-highlight), transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
+                            <User size={20} />
+                        </div>
                     </div>
                 </header>
 
-                <main style={{ flex: 1, padding: '20px 40px', overflowY: 'auto' }}>
-                    {activeTab === 'products' && <ProductList adminId={adminId} />}
-                    {activeTab === 'chat' && (
-                        adminId ? (
-                            <ChatWindow isDealer={true} receiverId={adminId} />
-                        ) : (
-                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-muted)' }}>
-                                <div className="loader"></div>
-                                <span style={{ marginLeft: '10px' }}>Connecting to support...</span>
-                            </div>
-                        )
-                    )}
-                    {activeTab === 'orders' && <OrderHistory />}
+                <main style={{ flex: 1, padding: '40px 48px', overflowY: 'auto' }}>
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={activeTab}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                        >
+                            {activeTab === 'products' && <ProductList adminId={adminId} />}
+                            {activeTab === 'chat' && (
+                                adminId ? (
+                                    <ChatWindow isDealer={true} receiverId={adminId} />
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '400px', color: 'var(--text-muted)' }}>
+                                        <div className="loading-spinner" style={{ marginBottom: '20px' }}></div>
+                                        <span>Establishing secure connection...</span>
+                                    </div>
+                                )
+                            )}
+                            {activeTab === 'orders' && <OrderHistory />}
+                        </motion.div>
+                    </AnimatePresence>
                 </main>
             </div>
         </div>

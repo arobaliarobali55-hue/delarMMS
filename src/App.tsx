@@ -63,11 +63,31 @@ const RootRedirect = () => {
   return <Navigate to="/dealer" />;
 };
 
+import { Toaster } from 'react-hot-toast';
+
 const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
         <ChatProvider>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: '#1a1a1e',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.1)',
+                padding: '16px',
+                borderRadius: '12px',
+              },
+              success: {
+                iconTheme: {
+                  primary: '#10b981',
+                  secondary: '#fff',
+                },
+              },
+            }}
+          />
           <Routes>
             <Route path="/login" element={<Login />} />
 

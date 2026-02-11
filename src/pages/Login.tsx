@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 
 const Login: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -46,7 +47,7 @@ const Login: React.FC = () => {
                     }
                 }
 
-                alert('Account created! Please check your email or try signing in.');
+                toast.success('Account created! Please check your email.');
                 setIsSignUp(false);
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
@@ -55,10 +56,12 @@ const Login: React.FC = () => {
                 });
                 if (error) throw error;
 
+                toast.success('Signed in successfully');
                 navigate('/');
             }
         } catch (err: any) {
             setError(err.message || 'An unexpected error occurred');
+            toast.error(err.message || 'Authentication failed');
         } finally {
             setLoading(false);
         }

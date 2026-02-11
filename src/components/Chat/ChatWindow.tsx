@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
-import { Send, Info, Clock, CheckCheck, Smile, Paperclip, ShoppingCart, X, Search, Plus, Minus } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
-import type { Product } from '../../types/database';
+import {
+    Send, Info, Clock, CheckCheck, Smile, Paperclip,
+    ShoppingCart, X, Search, Plus, Minus, MessageSquare, Package, User, Check
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
+import type { Message, Product } from '../../types/database';
 
 interface ChatWindowProps {
     isDealer?: boolean;
@@ -102,9 +106,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                 await placeOrder(
                     attachedProduct.id,
                     quantity,
-                    messageContent.trim()
+                    messageContent.trim(),
+                    attachedProduct.name,
+                    attachedProduct.price
                 );
 
+                toast.success('Order request sent!');
                 // Clear state on success
                 setAttachedProduct(null);
                 setQuantity(1);
@@ -112,7 +119,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                 sendTyping(false);
                 setShowProductList(false); // Ensure list is closed
             } catch (err: any) {
-                alert('Failed to place order: ' + err.message);
+                toast.error('Failed to place order: ' + err.message);
             } finally {
                 setOrdering(false);
             }
@@ -129,7 +136,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
         try {
             await sendMessage(content);
         } catch {
-            alert('Failed to send message');
+            toast.error('Failed to send message');
             setInputText(content); // Revert on failure
         }
     };

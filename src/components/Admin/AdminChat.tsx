@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Profile } from '../../types/database';
 import ChatWindow from '../Chat/ChatWindow';
-import { Search, User } from 'lucide-react';
+import { Search, User, MessageSquare } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminChat: React.FC = () => {
     const [dealers, setDealers] = useState<Profile[]>([]);
@@ -22,61 +23,101 @@ const AdminChat: React.FC = () => {
     );
 
     return (
-        <div style={{ display: 'flex', gap: '24px', height: '100%', minHeight: '600px' }}>
+        <div style={{ display: 'flex', gap: '32px', height: '100%', minHeight: '600px' }}>
             {/* Dealer List */}
-            <div style={{ width: '300px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ position: 'relative' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                     <input
                         placeholder="Search dealers..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{ width: '100%', background: 'var(--bg-dark)', border: '1px solid var(--border)', padding: '12px 12px 12px 40px', borderRadius: '10px', color: '#fff' }}
+                        className="glass-panel"
+                        style={{
+                            width: '100%',
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid var(--border)',
+                            padding: '14px 14px 14px 44px',
+                            borderRadius: '14px',
+                            color: '#fff',
+                            outline: 'none',
+                            transition: 'border-color 0.2s'
+                        }}
+                        onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
+                        onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                     />
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {filteredDealers.map((d) => (
-                        <button
+                        <motion.button
+                            whileHover={{ x: 4 }}
+                            whileTap={{ scale: 0.98 }}
                             key={d.id}
                             onClick={() => setSelectedDealerId(d.id)}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '12px',
-                                padding: '12px',
-                                borderRadius: '10px',
-                                border: selectedDealerId === d.id ? '1px solid var(--primary)' : '1px solid transparent',
-                                background: selectedDealerId === d.id ? 'var(--glass)' : 'none',
+                                gap: '16px',
+                                padding: '16px',
+                                borderRadius: '16px',
+                                border: '1px solid',
+                                borderColor: selectedDealerId === d.id ? 'var(--primary)' : 'transparent',
+                                background: selectedDealerId === d.id ? 'var(--glass)' : 'rgba(255,255,255,0.02)',
                                 color: selectedDealerId === d.id ? 'var(--primary)' : '#fff',
                                 cursor: 'pointer',
-                                textAlign: 'left'
+                                textAlign: 'left',
+                                transition: 'all 0.2s'
                             }}
                         >
-                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--glass)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <User size={18} />
+                            <div style={{
+                                width: '44px', height: '44px', borderRadius: '12px',
+                                background: selectedDealerId === d.id ? 'rgba(0, 242, 254, 0.1)' : 'var(--glass)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                border: '1px solid var(--border)'
+                            }}>
+                                <User size={20} />
                             </div>
                             <div style={{ flex: 1 }}>
-                                <div style={{ fontWeight: 600 }}>{d.name}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Online Support</div>
+                                <div style={{ fontWeight: 700, fontSize: '1rem' }}>{d.name}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--success)' }} />
+                                    Active Now
+                                </div>
                             </div>
-                        </button>
+                        </motion.button>
                     ))}
+                    {filteredDealers.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                            No dealers match your search
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Chat Area */}
-            <div style={{ flex: 1 }}>
-                {selectedDealerId ? (
-                    <ChatWindow isDealer={false} receiverId={selectedDealerId} />
-                ) : (
-                    <div className="glass-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                        <div style={{ padding: '24px', borderRadius: '50%', background: 'var(--glass)', marginBottom: '20px' }}>
-                            <User size={48} />
+            <div style={{ flex: 1, height: '100%', position: 'relative' }}>
+                <AnimatePresence mode="wait">
+                    {selectedDealerId ? (
+                        <motion.div
+                            key={selectedDealerId}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            style={{ height: '100%' }}
+                        >
+                            <ChatWindow isDealer={false} receiverId={selectedDealerId} />
+                        </motion.div>
+                    ) : (
+                        <div className="glass-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                            <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'var(--glass)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+                                <MessageSquare size={48} style={{ opacity: 0.3 }} />
+                            </div>
+                            <h3 style={{ color: '#fff', marginBottom: '8px' }}>Start a Conversation</h3>
+                            <p>Select a dealer from the list to begin messaging</p>
                         </div>
-                        <p>Select a dealer to start messaging</p>
-                    </div>
-                )}
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

@@ -1,101 +1,186 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Order } from '../../types/database';
-import { ClipboardList, CheckCircle2, Clock } from 'lucide-react';
+import { ClipboardList, CheckCircle2, Clock, Package, User, DollarSign } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 
 const OrderManager: React.FC = () => {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const fetchOrders = async () => {
+        const { data, error } = await supabase
+            .from('orders')
+            .select(`
+                *,
+                dealer:profiles!dealer_id(name),
+                product:products!product_id(name, price)
+            `)
+            .order('created_at', { ascending: false });
+
+        if (!error && data) setOrders(data as unknown as Order[]);
+        setLoading(false);
+    };
+
     useEffect(() => {
-        const fetchOrders = async () => {
-            const { data, error } = await supabase
-                .from('orders')
-                .select(`
-            *,
-            dealer:profiles!dealer_id(name),
-            product:products!product_id(name, price)
-          `)
-                .order('created_at', { ascending: false });
-
-            if (!error && data) setOrders(data as unknown as Order[]);
-            setLoading(false);
-        };
-
         fetchOrders();
+
+        // Subscribe to all order changes
+        const channel = supabase.channel('admin_orders')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+                fetchOrders();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
     }, []);
 
     const updateStatus = async (id: string, status: string) => {
-        await supabase.from('orders').update({ status }).eq('id', id);
-        // Refresh local state without a full fetch if possible, or just re-fetch
-        const { data } = await supabase
-            .from('orders')
-            .select(`
-            *,
-            dealer:profiles!dealer_id(name),
-            product:products!product_id(name, price)
-          `)
-            .order('created_at', { ascending: false });
-        if (data) setOrders(data as unknown as Order[]);
+        const toastId = toast.loading('Updating status...');
+        try {
+            const { error } = await supabase.from('orders').update({ status }).eq('id', id);
+            if (error) throw error;
+            toast.success(`Order marked as ${status}`, { id: toastId });
+            await fetchOrders();
+        } catch (err: any) {
+            toast.error('Failed to update: ' + err.message, { id: toastId });
+        }
     };
 
-    if (loading) return <div>Fetching global orders...</div>;
+    const stats = {
+        total: orders.length,
+        pending: orders.filter(o => o.status === 'pending').length,
+        revenue: orders.reduce((acc, o) => acc + (o.quantity * (o.products?.price || 0)), 0)
+    };
+
+    if (loading) return (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+            <div className="loading-spinner"></div>
+        </div>
+    );
 
     return (
-        <div>
-            <div style={{ marginBottom: '32px' }}>
-                <h3>Order Feed</h3>
-                <p style={{ color: 'var(--text-muted)' }}>Real-time stream of incoming dealer requests</p>
+        <div className="fade-in">
+            {/* Stats Header */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '32px' }}>
+                <div className="glass-panel" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(79, 172, 254, 0.1)', color: 'var(--secondary)' }}>
+                        <ClipboardList size={24} />
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total Orders</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{stats.total}</div>
+                    </div>
+                </div>
+                <div className="glass-panel" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--warning)' }}>
+                        <Clock size={24} />
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Pending</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{stats.pending}</div>
+                    </div>
+                </div>
+                <div className="glass-panel" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
+                        <DollarSign size={24} />
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Revenue</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>${stats.revenue.toFixed(2)}</div>
+                    </div>
+                </div>
             </div>
 
-            <div style={{ display: 'grid', gap: '16px' }}>
-                {orders.map((order) => (
-                    <div key={order.id} className="glass-panel" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-                            <div style={{ padding: '12px', borderRadius: '12px', background: 'var(--glass)', color: 'var(--primary)' }}>
-                                <ClipboardList size={24} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <AnimatePresence>
+                    {orders.map((order) => (
+                        <motion.div
+                            layout
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            key={order.id}
+                            className="glass-panel"
+                            style={{ padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                        >
+                            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                                <div style={{
+                                    width: '56px', height: '56px', borderRadius: '14px',
+                                    background: 'var(--glass)', border: '1px solid var(--border)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: 'var(--primary)'
+                                }}>
+                                    <Package size={28} />
+                                </div>
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                        <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{order.products?.name || 'Product'}</span>
+                                        <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>x {order.quantity}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.85rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
+                                            <User size={14} />
+                                            <span style={{ color: '#fff', fontWeight: 500 }}>{order.dealer?.name || 'Dealer'}</span>
+                                        </div>
+                                        <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border)' }} />
+                                        <div style={{ color: 'var(--primary)', fontWeight: 600 }}>
+                                            Total: ${(order.quantity * (order.products?.price || 0)).toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div style={{ marginTop: '8px', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <Clock size={12} /> {new Date(order.created_at).toLocaleString()}
+                                    </div>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>{order.products?.name || 'Unknown'} x {order.quantity}</span>
-                                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                    Dealer: <strong style={{ color: '#fff' }}>{order.dealer?.name || 'Unknown'}</strong> •
-                                    Price: ${(order.products?.price || 0) * order.quantity}
-                                </span>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <Clock size={12} /> {new Date(order.created_at).toLocaleString()}
-                                </span>
+
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                                    <label style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Update Status</label>
+                                    <select
+                                        value={order.status}
+                                        onChange={(e) => updateStatus(order.id, e.target.value)}
+                                        style={{
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid var(--border)',
+                                            color: '#fff',
+                                            padding: '10px 16px',
+                                            borderRadius: '10px',
+                                            fontSize: '0.85rem',
+                                            cursor: 'pointer',
+                                            outline: 'none',
+                                            transition: 'border-color 0.2s'
+                                        }}
+                                        onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
+                                        onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                                    >
+                                        <option value="pending">Pending</option>
+                                        <option value="confirmed">Confirmed</option>
+                                        <option value="delivered">Delivered</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+
+                                {order.status === 'pending' && (
+                                    <button
+                                        onClick={() => updateStatus(order.id, 'confirmed')}
+                                        className="btn-primary"
+                                        style={{ padding: '10px 16px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                    >
+                                        <CheckCircle2 size={18} />
+                                        <span>Confirm</span>
+                                    </button>
+                                )}
                             </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <select
-                                value={order.status}
-                                onChange={(e) => updateStatus(order.id, e.target.value)}
-                                style={{
-                                    background: 'var(--bg-dark)',
-                                    border: '1px solid var(--border)',
-                                    color: '#fff',
-                                    padding: '8px 12px',
-                                    borderRadius: '8px',
-                                    fontSize: '0.85rem'
-                                }}
-                            >
-                                <option value="pending">Pending</option>
-                                <option value="confirmed">Confirmed</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="cancelled">Cancelled</option>
-                            </select>
-
-                            {order.status === 'pending' && (
-                                <button
-                                    onClick={() => updateStatus(order.id, 'confirmed')}
-                                    style={{ background: 'none', border: 'none', color: 'var(--success)', cursor: 'pointer' }}
-                                >
-                                    <CheckCircle2 size={24} />
-                                </button>
-                            )}
-                        </div>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
+                {orders.length === 0 && (
+                    <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }} className="glass-panel">
+                        <ClipboardList size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
+                        <p>No orders yet. They will appear here in real-time.</p>
                     </div>
-                ))}
+                )}
             </div>
         </div>
     );

@@ -1,91 +1,137 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { Users, ShoppingBag, BarChart3, Settings, LogOut, MessageSquare } from 'lucide-react';
+import { Users, ShoppingBag, BarChart3, Settings, LogOut, MessageSquare, ChevronRight, User } from 'lucide-react';
 import DealerOverview from '../../components/Admin/DealerOverview';
 import OrderManager from '../../components/Admin/OrderManager';
 import ProductCRUD from '../../components/Admin/ProductCRUD';
 import AdminChat from '../../components/Admin/AdminChat';
 import Analytics from '../../components/Admin/Analytics';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminDashboard: React.FC = () => {
     const { profile, signOut } = useAuth();
     const [activeTab, setActiveTab] = useState<'dealers' | 'orders' | 'products' | 'chat' | 'analytics'>('analytics');
 
+    const menuItems = [
+        { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+        { id: 'dealers', label: 'Dealers', icon: Users },
+        { id: 'orders', label: 'Orders', icon: ShoppingBag },
+        { id: 'products', label: 'Inventory', icon: Settings },
+        { id: 'chat', label: 'Messages', icon: MessageSquare },
+    ];
+
     return (
-        <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-dark)' }}>
+        <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-dark)', overflow: 'hidden' }}>
             {/* Sidebar */}
             <div style={{
-                width: '260px',
+                width: '280px',
                 borderRight: '1px solid var(--border)',
                 display: 'flex',
                 flexDirection: 'column',
-                padding: '30px 20px',
-                gap: '10px'
+                padding: '32px 24px',
+                background: 'linear-gradient(180deg, rgba(18, 18, 20, 0.5), rgba(7, 7, 8, 0.5))',
+                backdropFilter: 'blur(20px)',
+                zIndex: 10
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px', padding: '0 10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '48px', padding: '0 8px' }}>
                     <div style={{
-                        width: '40px', height: '40px', borderRadius: '10px',
-                        background: 'linear-gradient(45deg, var(--accent), var(--secondary))',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        width: '44px', height: '44px', borderRadius: '12px',
+                        background: 'linear-gradient(135deg, var(--accent), var(--secondary))',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 8px 16px rgba(79, 172, 254, 0.2)'
                     }}>
                         <BarChart3 color="#fff" size={24} />
                     </div>
-                    <h2 className="gradient-text">ADMIN PANEL</h2>
+                    <div style={{ letterSpacing: '0.15em', fontWeight: 900, fontSize: '1.2rem', color: '#fff' }}>
+                        PROTOCTOR
+                        <div style={{ fontSize: '0.6rem', color: 'var(--accent)', marginTop: '-4px', fontWeight: 700 }}>ADMIN CONTROL</div>
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                    {menuItems.map(item => (
+                        <button
+                            key={item.id}
+                            onClick={() => setActiveTab(item.id as any)}
+                            className={`sidebar-btn ${activeTab === item.id ? 'active' : ''}`}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                width: '100%',
+                                padding: '14px 16px',
+                                borderRadius: '12px',
+                                background: activeTab === item.id ? 'var(--glass)' : 'transparent',
+                                border: '1px solid',
+                                borderColor: activeTab === item.id ? 'var(--border)' : 'transparent',
+                                color: activeTab === item.id ? 'var(--primary)' : 'var(--text-muted)',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                textAlign: 'left',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            <item.icon size={20} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+                            <span style={{ fontWeight: 600, fontSize: '1rem' }}>{item.label}</span>
+                            {activeTab === item.id && (
+                                <motion.div
+                                    layoutId="adminTabIndicator"
+                                    style={{
+                                        position: 'absolute',
+                                        left: 0,
+                                        width: '4px',
+                                        height: '24px',
+                                        borderRadius: '0 4px 4px 0',
+                                        background: 'var(--primary)',
+                                        boxShadow: '0 0 10px var(--primary)'
+                                    }}
+                                />
+                            )}
+                        </button>
+                    ))}
                 </div>
 
                 <button
-                    onClick={() => setActiveTab('analytics')}
-                    className={`sidebar-btn ${activeTab === 'analytics' ? 'active' : ''}`}
+                    onClick={signOut}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        width: '100%',
+                        padding: '14px 16px',
+                        borderRadius: '12px',
+                        background: 'rgba(239, 68, 68, 0.05)',
+                        border: '1px solid rgba(239, 68, 68, 0.1)',
+                        color: 'var(--danger)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.05)')}
                 >
-                    <BarChart3 size={20} /> Analytics
+                    <LogOut size={20} />
+                    <span style={{ fontWeight: 600 }}>Sign Out</span>
                 </button>
-
-                <button
-                    onClick={() => setActiveTab('dealers')}
-                    className={`sidebar-btn ${activeTab === 'dealers' ? 'active' : ''}`}
-                >
-                    <Users size={20} /> Dealers
-                </button>
-
-                <button
-                    onClick={() => setActiveTab('orders')}
-                    className={`sidebar-btn ${activeTab === 'orders' ? 'active' : ''}`}
-                >
-                    <ShoppingBag size={20} /> Orders
-                </button>
-
-                <button
-                    onClick={() => setActiveTab('products')}
-                    className={`sidebar-btn ${activeTab === 'products' ? 'active' : ''}`}
-                >
-                    <Settings size={20} /> Products
-                </button>
-
-                <button
-                    onClick={() => setActiveTab('chat')}
-                    className={`sidebar-btn ${activeTab === 'chat' ? 'active' : ''}`}
-                >
-                    <MessageSquare size={20} /> Messages
-                </button>
-
-                <div style={{ marginTop: 'auto' }}>
-                    <button onClick={signOut} className="sidebar-btn" style={{ color: 'var(--danger)' }}>
-                        <LogOut size={20} /> Logout
-                    </button>
-                </div>
             </div>
 
             {/* Main Content */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
                 <header style={{
-                    padding: '24px 40px',
-                    borderBottom: '1px solid var(--border)',
+                    padding: '24px 48px',
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    background: 'rgba(7, 7, 8, 0.4)',
+                    backdropFilter: 'blur(10px)',
+                    borderBottom: '1px solid var(--border)',
+                    zIndex: 5
                 }}>
                     <div>
-                        <h2 style={{ fontSize: '1.5rem' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            Admin <ChevronRight size={12} /> <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{activeTab}</span>
+                        </div>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 800 }}>
                             {activeTab === 'analytics' && 'Performance Analytics'}
                             {activeTab === 'dealers' && 'Dealer Management'}
                             {activeTab === 'orders' && 'Order Oversight'}
@@ -93,50 +139,36 @@ const AdminDashboard: React.FC = () => {
                             {activeTab === 'chat' && 'Central Communication'}
                         </h2>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 16px', background: 'var(--glass)', borderRadius: '20px', border: '1px solid var(--border)' }}>
                         <div style={{ textAlign: 'right' }}>
-                            <p style={{ fontWeight: 600 }}>{profile?.name}</p>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>System Administrator</p>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{profile?.name}</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 700 }}>Master Admin</div>
+                        </div>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--glass-highlight), transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
+                            <User size={20} />
                         </div>
                     </div>
                 </header>
 
-                <main style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
-                    {activeTab === 'analytics' && <Analytics />}
-                    {activeTab === 'dealers' && <DealerOverview />}
-                    {activeTab === 'orders' && <OrderManager />}
-                    {activeTab === 'products' && <ProductCRUD />}
-                    {activeTab === 'chat' && <AdminChat />}
+                <main style={{ flex: 1, padding: '40px 48px', overflowY: 'auto' }}>
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={activeTab}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.25, ease: 'easeOut' }}
+                        >
+                            {activeTab === 'analytics' && <Analytics />}
+                            {activeTab === 'dealers' && <DealerOverview />}
+                            {activeTab === 'orders' && <OrderManager />}
+                            {activeTab === 'products' && <ProductCRUD />}
+                            {activeTab === 'chat' && <AdminChat />}
+                        </motion.div>
+                    </AnimatePresence>
                 </main>
             </div>
-
-            <style>{`
-        .sidebar-btn {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          width: 100%;
-          padding: 12px 16px;
-          border-radius: 8px;
-          background: none;
-          border: none;
-          color: var(--text-muted);
-          font-family: inherit;
-          font-size: 0.95rem;
-          cursor: pointer;
-          transition: all 0.2s;
-          text-align: left;
-        }
-        .sidebar-btn:hover {
-          background: var(--glass);
-          color: var(--text-main);
-        }
-        .sidebar-btn.active {
-          background: var(--glass);
-          color: var(--primary);
-          border: 1px solid var(--glass-border);
-        }
-      `}</style>
         </div>
     );
 };

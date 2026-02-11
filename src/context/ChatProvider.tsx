@@ -120,9 +120,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setMessages((prev) => {
                         // If it's our own message, try to find the optimistic version and replace it
                         if (newMessage.sender_id === user.id) {
+                            const trimmedMsg = newMessage.message.trim();
                             const tempMatch = prev.find(m =>
                                 m.id.startsWith('temp-') &&
-                                m.message === newMessage.message
+                                (m.message.trim() === trimmedMsg)
                             );
 
                             if (tempMatch) {
@@ -135,12 +136,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         return [...prev, { ...newMessage, sender } as any];
                     });
 
-                    // Play sound only for incoming messages
-                    if (newMessage.sender_id !== user.id) {
-                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
-                        audio.volume = 0.5;
-                        audio.play().catch(e => console.log('Audio play failed', e));
-                    }
+                    // Force a local storage sync after update
+                    // This happens in another effect but we want to be sure
                 }
             })
             .on('presence', { event: 'sync' }, () => {
@@ -254,9 +251,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         productId: string,
         quantity: number,
         messageText: string,
-        receiverId: string | null
+        receiverId: string | null,
+        productName: string,
+        productPrice: number
     ) => {
         if (!user) return;
+        console.log(`Placing order for ${productName} ($${productPrice}/ea)`);
 
         const tempId = 'temp-order-' + Date.now();
         const optimisticMessage: Message = {

@@ -309,8 +309,80 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [user]);
 
+    const placeBulkOrder = useCallback(async (
+        items: { productId: string; quantity: number; price: number; name: string }[],
+        messageText: string,
+        receiverId: string | null
+    ) => {
+        if (!user || items.length === 0) return;
+
+        console.log(`Placing bulk order for ${items.length} items`);
+
+        const tempId = 'temp-order-' + Date.now();
+        const optimisticMessage: Message = {
+            id: tempId,
+            sender_id: user.id,
+            receiver_id: receiverId,
+            message: messageText,
+            type: 'order',
+            timestamp: new Date().toISOString(),
+            status: 'sending',
+            sender: {
+                id: user.id,
+                name: 'You',
+                email: user.email || '',
+                role: 'dealer'
+            }
+        };
+
+        setMessages((prev) => [...prev, optimisticMessage]);
+
+        try {
+            // 1. Create all order entries in parallel
+            // Note: We use a loop or map because we want individual rows in 'orders' table
+
+            const ordersToInsert = items.map(item => ({
+                dealer_id: user.id,
+                product_id: item.productId,
+                quantity: item.quantity,
+                status: 'pending' // default status
+            }));
+
+            const { error: orderError } = await supabase.from('orders').insert(ordersToInsert);
+            if (orderError) throw orderError;
+
+            // 2. Send the summary Chat Message
+            const { data: msgData, error: msgError } = await supabase
+                .from('messages')
+                .insert([{
+                    sender_id: user.id,
+                    receiver_id: receiverId,
+                    message: messageText,
+                    type: 'order',
+                }])
+                .select()
+                .single();
+
+            if (msgError) throw msgError;
+
+            // 3. Update Optimistic Message
+            if (msgData) {
+                setMessages((prev) => prev.map(msg =>
+                    msg.id === tempId ? { ...msg, ...msgData, status: 'sent', sender: optimisticMessage.sender } : msg
+                ));
+            }
+
+        } catch (error) {
+            console.error('Error placing bulk order:', error);
+            setMessages((prev) => prev.map(msg =>
+                msg.id === tempId ? { ...msg, status: 'error' } : msg
+            ));
+            throw error;
+        }
+    }, [user]);
+
     return (
-        <ChatContext.Provider value={{ messages, sendMessage, onlineUsers, typingUsers, sendTyping, placeOrder, loading }}>
+        <ChatContext.Provider value={{ messages, sendMessage, onlineUsers, typingUsers, sendTyping, placeOrder, placeBulkOrder, loading }}>
             {children}
         </ChatContext.Provider>
     );

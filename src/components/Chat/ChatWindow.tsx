@@ -15,7 +15,7 @@ interface ChatWindowProps {
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = null }) => {
-    const { messages, sendMessage, placeOrder, loading, onlineUsers, typingUsers, sendTyping } = useChat(receiverId);
+    const { messages, sendMessage, placeBulkOrder, loading, onlineUsers, typingUsers, sendTyping } = useChat(receiverId);
     const { user } = useAuth();
     const [inputText, setInputText] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -27,9 +27,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Attachment State
-    const [attachedProduct, setAttachedProduct] = useState<Product | null>(null);
-    const [quantity, setQuantity] = useState(1);
+    // Attachment State (Multi-product)
+    const [attachedProducts, setAttachedProducts] = useState<(Product & { orderQty: number })[]>([]);
     const [ordering, setOrdering] = useState(false);
 
     const scrollToBottom = () => {
@@ -96,28 +95,32 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // If there's an attached product, handle as Order
-        if (attachedProduct) {
+        // If there are attached products, handle as Bulk Order
+        if (attachedProducts.length > 0) {
             if (!user) return;
             setOrdering(true);
             try {
-                const messageContent = `📦 Order Request: \n${attachedProduct.name} (x${quantity}) \n💰 Total: ৳${(attachedProduct.price * quantity).toLocaleString()} \n\n${inputText} `;
+                // Construct Summary Message
+                const total = attachedProducts.reduce((sum, item) => sum + (item.price * item.orderQty), 0);
+                const itemsList = attachedProducts.map(p => `- ${p.name} (x${p.orderQty}) - ৳${(p.price * p.orderQty).toLocaleString()}`).join('\n');
+                const messageContent = `📦 Bulk Order Request:\n${itemsList}\n💰 Total: ৳${total.toLocaleString()}\n\n${inputText}`;
 
-                await placeOrder(
-                    attachedProduct.id,
-                    quantity,
-                    messageContent.trim(),
-                    attachedProduct.name,
-                    attachedProduct.price
-                );
+                // Prepare items for placement
+                const itemsToOrder = attachedProducts.map(p => ({
+                    productId: p.id,
+                    quantity: p.orderQty,
+                    price: p.price,
+                    name: p.name
+                }));
+
+                await placeBulkOrder(itemsToOrder, messageContent.trim()); // receiverId handled in provider or inherited
 
                 toast.success('Order request sent!');
                 // Clear state on success
-                setAttachedProduct(null);
-                setQuantity(1);
+                setAttachedProducts([]);
                 setInputText('');
                 sendTyping(false);
-                setShowProductList(false); // Ensure list is closed
+                setShowProductList(false);
             } catch (err: any) {
                 toast.error('Failed to place order: ' + err.message);
             } finally {
@@ -157,12 +160,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
         setSearchTerm('');
     };
 
-    const handleProductSelect = (product: Product) => {
-        if (product.stock > 0) {
-            setAttachedProduct(product);
-            setQuantity(1);
-            closeProductList();
-        }
+    const toggleProductSelect = (product: Product) => {
+        if (product.stock <= 0) return;
+
+        setAttachedProducts(prev => {
+            const exists = prev.find(p => p.id === product.id);
+            if (exists) {
+                return prev.filter(p => p.id !== product.id);
+            } else {
+                return [...prev, { ...product, orderQty: 1 }];
+            }
+        });
     };
 
     const filteredProducts = products.filter(p =>
@@ -308,7 +316,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                 background: 'rgba(7, 7, 8, 0.2)',
                 position: 'relative'
             }}>
-                {/* Background Pattern Overlay (Optional but premium) */}
+                {/* Background Pattern Overlay */}
                 <div style={{
                     position: 'absolute',
                     top: 0, left: 0, width: '100%', height: '100%',
@@ -347,7 +355,58 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                 flexDirection: 'column',
                 gap: '8px'
             }}>
-                {/* Product Attachment Preview omitted for brevity in chunk but should stay */}
+                {/* Products Attachment Preview */}
+                <AnimatePresence>
+                    {attachedProducts.length > 0 && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}
+                        >
+                            {attachedProducts.map(p => (
+                                <div key={p.id} style={{
+                                    background: 'var(--glass)',
+                                    padding: '8px 12px',
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    border: '1px solid var(--border)',
+                                    minWidth: 'fit-content'
+                                }}>
+                                    <span style={{ fontSize: '0.85rem', color: '#fff' }}>{p.name}</span>
+                                    {/* Tiny Quantity Input */}
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={p.orderQty}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value) || 1;
+                                            setAttachedProducts(prev => prev.map(item => item.id === p.id ? { ...item, orderQty: val } : item));
+                                        }}
+                                        style={{
+                                            width: '40px',
+                                            padding: '2px',
+                                            borderRadius: '4px',
+                                            border: 'none',
+                                            background: 'rgba(255,255,255,0.1)',
+                                            color: '#fff',
+                                            textAlign: 'center',
+                                            fontSize: '0.8rem'
+                                        }}
+                                    />
+                                    <button
+                                        onClick={() => toggleProductSelect(p)}
+                                        style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0 4px' }}
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            ))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{
@@ -391,12 +450,32 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                                 style={{
                                     background: 'none',
                                     border: 'none',
-                                    color: attachedProduct ? 'var(--primary)' : '#8696a0',
+                                    color: attachedProducts.length > 0 ? 'var(--primary)' : '#8696a0',
                                     cursor: 'pointer',
-                                    padding: '4px'
+                                    padding: '4px',
+                                    position: 'relative'
                                 }}
                             >
                                 <ShoppingCart size={22} />
+                                {attachedProducts.length > 0 && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '-4px',
+                                        right: '-4px',
+                                        background: 'var(--primary)',
+                                        color: '#000',
+                                        fontSize: '0.65rem',
+                                        fontWeight: 'bold',
+                                        width: '16px',
+                                        height: '16px',
+                                        borderRadius: '50%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        {attachedProducts.length}
+                                    </div>
+                                )}
                             </button>
                         )}
                     </div>
@@ -407,7 +486,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                         onClick={handleSend}
                         disabled={ordering}
                         style={{
-                            background: (inputText.trim() || attachedProduct) ? 'var(--primary)' : '#8696a0',
+                            background: (inputText.trim() || attachedProducts.length > 0) ? 'var(--primary)' : '#8696a0',
                             border: 'none',
                             color: '#000',
                             cursor: 'pointer',
@@ -461,12 +540,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                             {/* Modal Header */}
                             <div style={{ padding: '24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass)' }}>
                                 <div>
-                                    <h3 style={{ margin: 0, color: '#fff', fontSize: '1.25rem' }}>Select Product</h3>
-                                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Choose an item to attach to your chat</p>
+                                    <h3 style={{ margin: 0, color: '#fff', fontSize: '1.25rem' }}>Select Products</h3>
+                                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tap items to select multiple</p>
                                 </div>
-                                <button onClick={closeProductList} style={{ background: 'var(--glass)', border: 'none', color: '#fff', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <X size={18} />
-                                </button>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    {attachedProducts.length > 0 && (
+                                        <button onClick={closeProductList} style={{ background: 'var(--primary)', border: 'none', color: '#000', fontWeight: 600, padding: '6px 16px', borderRadius: '20px', cursor: 'pointer' }}>
+                                            Done ({attachedProducts.length})
+                                        </button>
+                                    )}
+                                    <button onClick={closeProductList} style={{ background: 'var(--glass)', border: 'none', color: '#fff', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <X size={18} />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* List Content */}
@@ -498,39 +584,47 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ isDealer = false, receiverId = 
                                     </div>
                                 ) : (
                                     <div style={{ display: 'grid', gap: '12px' }}>
-                                        {filteredProducts.map(p => (
-                                            <motion.div
-                                                whileHover={{ x: 4, background: 'rgba(255,255,255,0.05)' }}
-                                                key={p.id}
-                                                onClick={() => handleProductSelect(p)}
-                                                style={{
-                                                    background: 'rgba(255,255,255,0.02)',
-                                                    padding: '16px',
-                                                    borderRadius: '14px',
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    cursor: p.stock > 0 ? 'pointer' : 'default',
-                                                    opacity: p.stock > 0 ? 1 : 0.5,
-                                                    border: '1px solid transparent',
-                                                    borderColor: attachedProduct?.id === p.id ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--glass)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        <Package size={20} color={p.stock > 0 ? 'var(--primary)' : 'var(--text-muted)'} />
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontWeight: 600, color: '#fff' }}>{p.name}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: p.stock > 0 ? 'var(--success)' : 'var(--danger)' }}>
-                                                            {p.stock > 0 ? `${p.stock} units available` : 'Out of stock'}
+                                        {filteredProducts.map(p => {
+                                            const isSelected = attachedProducts.some(ap => ap.id === p.id);
+                                            return (
+                                                <motion.div
+                                                    whileHover={{ x: 4, background: 'rgba(255,255,255,0.05)' }}
+                                                    key={p.id}
+                                                    onClick={() => toggleProductSelect(p)}
+                                                    style={{
+                                                        background: isSelected ? 'rgba(7, 243, 203, 0.1)' : 'rgba(255,255,255,0.02)',
+                                                        padding: '16px',
+                                                        borderRadius: '14px',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        cursor: p.stock > 0 ? 'pointer' : 'default',
+                                                        opacity: p.stock > 0 ? 1 : 0.5,
+                                                        border: '1px solid',
+                                                        borderColor: isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--glass)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                                            <Package size={20} color={isSelected ? 'var(--primary)' : 'var(--text-muted)'} />
+                                                            {isSelected && (
+                                                                <div style={{ position: 'absolute', top: '-6px', right: '-6px' }}>
+                                                                    <CheckCheck size={16} color="var(--primary)" fill="#000" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ fontWeight: 600, color: '#fff' }}>{p.name}</div>
+                                                            <div style={{ fontSize: '0.8rem', color: p.stock > 0 ? 'var(--success)' : 'var(--danger)' }}>
+                                                                {p.stock > 0 ? `${p.stock} units available` : 'Out of stock'}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1.1rem' }}>৳{p.price}</div>
-                                            </motion.div>
-                                        ))}
+                                                    <div style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1.1rem' }}>৳{p.price}</div>
+                                                </motion.div>
+                                            );
+                                        })}
                                         {filteredProducts.length === 0 && (
                                             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                                                 No products found

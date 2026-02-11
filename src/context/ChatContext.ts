@@ -15,6 +15,11 @@ export interface ChatContextType {
         productName: string,
         productPrice: number
     ) => Promise<void>;
+    placeBulkOrder: (
+        items: { productId: string; quantity: number; price: number; name: string }[],
+        messageText: string,
+        receiverId: string | null
+    ) => Promise<void>;
     loading: boolean;
 }
 
